@@ -16,7 +16,7 @@ let filteredHistoryData = [];
 let histSortCol = 'invoiceNo';
 let histSortAsc = false;
 
-// ================= UI Interactions & Listeners =================
+
 
 document.addEventListener('focusin', function(e) { 
     if (e.target.tagName === 'INPUT' && e.target.type === 'number') { 
