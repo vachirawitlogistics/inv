@@ -1,7 +1,7 @@
 // URL ที่ยิงไปยัง Google Apps Script (API)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyiugspGphfRFBGWOAptcenyZ6Rp5QGHxwyvuOBdmYiLKuJKWzMi-sjodlsLuBw6xXZ/exec';
 
-// ฟังก์ชันหลักที่ใช้ติดต่อกับ API (พร้อมระบบ Retry)
+
 async function callAPI(action, params = {}, retries = 2) {
     const token = localStorage.getItem('billingToken');
     
