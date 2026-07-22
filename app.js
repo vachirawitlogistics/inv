@@ -1,4 +1,4 @@
-// ================= Global Variables =================
+
 const SESSION_DURATION = 6 * 60 * 60 * 1000;
 let currentUser = '';
 
