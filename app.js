@@ -1,4 +1,4 @@
-
+// ================= Global Variables =================
 const SESSION_DURATION = 6 * 60 * 60 * 1000;
 let currentUser = '';
 
@@ -16,7 +16,7 @@ let filteredHistoryData = [];
 let histSortCol = 'invoiceNo';
 let histSortAsc = false;
 
-
+// ================= UI Interactions & Listeners =================
 
 document.addEventListener('focusin', function(e) { 
     if (e.target.tagName === 'INPUT' && e.target.type === 'number') { 
@@ -105,17 +105,16 @@ async function doLogin() {
             timer: 2000
         });
     }
+
+    // ป้องกันการกดปุ่มหรือ Enter เบิ้ล (ถ้าปุ่มถูกปิดอยู่ ให้หยุดการทำงานทันที)
+    if (btn.disabled) return;
     
-    // เปลี่ยนปุ่มให้เป็น Loading Spinner เพื่อให้รู้ว่ากดติดแล้ว
-    const originalBtnHTML = btn.innerHTML;
+    // ล็อกหน้าตาปุ่มต้นฉบับไว้ตายตัว
+    const originalBtnHTML = `<span class="fw-bold fs-6 tracking-wide">AUTHENTICATE</span> <i class="bi bi-rocket-takeoff-fill ms-2 animate-fly"></i>`;
+    
+    // เปลี่ยนปุ่มให้เป็น Loading Spinner เพื่อให้รู้ว่ากดติดแล้ว และป้องกันการกดซ้ำ
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span class="fw-bold fs-6 tracking-wide">กำลังเข้าสู่ระบบ...</span>`;
     btn.disabled = true;
-
-    Swal.fire({ 
-        title: 'กำลังตรวจสอบ...', 
-        allowOutsideClick: false, 
-        didOpen: () => Swal.showLoading() 
-    });
     
     try {
         const res = await callAPI('verifyLogin', { password: pwd }, 0);
@@ -130,6 +129,11 @@ async function doLogin() {
             document.getElementById('loginSection').style.display = 'none'; 
             document.getElementById('mainApp').style.display = 'flex';
             
+            // คืนค่าปุ่มกลับมาเผื่อในกรณีที่ล็อกเอาท์ออกมา
+            btn.innerHTML = originalBtnHTML;
+            btn.disabled = false;
+            document.getElementById('loginPassword').value = '';
+            
             loadBillingData(true); 
         } else { 
             Swal.fire({
@@ -137,13 +141,13 @@ async function doLogin() {
                 text: res.message, 
                 customClass: {popup: 'rounded-4'}
             }); 
-            // คืนค่าปุ่มกลับมาเหมือนเดิม
+            // คืนค่าปุ่มกลับมาเหมือนเดิมเพื่อให้กดใหม่ได้
             btn.innerHTML = originalBtnHTML;
             btn.disabled = false;
         }
     } catch(err) { 
         Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); 
-        // คืนค่าปุ่มกลับมาเหมือนเดิม
+        // คืนค่าปุ่มกลับมาเหมือนเดิมเพื่อให้กดใหม่ได้
         btn.innerHTML = originalBtnHTML;
         btn.disabled = false;
     }
@@ -159,7 +163,7 @@ function logout() {
     document.getElementById('mainApp').style.display = 'none'; 
     document.getElementById('loginSection').style.display = 'block'; 
     
-    // คืนค่าปุ่มเข้าสู่ระบบกลับมาเหมือนเดิม เผื่อกดล็อกเอาท์ออกมา
+    // คืนค่าปุ่มเข้าสู่ระบบกลับมาเหมือนเดิม
     const btn = document.querySelector('.btn-login');
     if (btn) {
         btn.innerHTML = `<span class="fw-bold fs-6 tracking-wide">AUTHENTICATE</span> <i class="bi bi-rocket-takeoff-fill ms-2 animate-fly"></i>`;
