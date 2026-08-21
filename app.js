@@ -184,7 +184,7 @@ async function loadBillingData(isLogin = false) {
     try {
         const res = await callAPI('getPendingAndReadyBilling');
         
-        rawBillingData = res.data; 
+        rawBillingData = res.data || [];
         bkgTotalsGlobal = res.bkgTotals || {}; 
         
         auditData = []; 
