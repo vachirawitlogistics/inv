@@ -19,13 +19,15 @@ async function callAPI(action, params = {}, retries = 2) {
             
             const result = await response.json();
             
-            if (result && result.error && !result.success && !result.message) {
+            if (result && (result.error || result.success === false)) {
+                let errText = result.error || result.message || "Unknown API Error";
+                
                 // หาก Token หมดอายุให้เตะกลับไปหน้า Login
-                if (result.error.includes("SESSION_EXPIRED")) {
+                if (errText.includes("SESSION_EXPIRED")) {
                     logout();
                     throw new Error("Session หมดอายุ กรุณาล็อกอินใหม่");
                 }
-                throw new Error(result.error);
+                throw new Error(errText);
             }
             
             return result;
