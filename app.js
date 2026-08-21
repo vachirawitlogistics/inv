@@ -132,10 +132,11 @@ async function doLogin() {
             // คืนค่าปุ่มกลับมาเผื่อในกรณีที่ล็อกเอาท์ออกมา
             btn.innerHTML = originalBtnHTML;
             btn.disabled = false;
-            document.getElementById('loginPassword').value = '';
-            
-            loadBillingData(true); 
-        } else { 
+                document.getElementById('loginPassword').value = '';    
+                setTimeout(() => {
+                    loadBillingData(true); 
+                }, 1000);
+            } else { 
             Swal.fire({
                 icon: 'error', 
                 text: res.message, 
@@ -167,7 +168,7 @@ function logout() {
     const btn = document.querySelector('.btn-login');
     if (btn) {
         btn.innerHTML = `<span class="fw-bold fs-6 tracking-wide">AUTHENTICATE</span> <i class="bi bi-rocket-takeoff-fill ms-2 animate-fly"></i>`;
-        btn.disabled = false;
+        
     }
 }
 
