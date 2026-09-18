@@ -7,14 +7,13 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
     
     for (let i = 0; i <= retries; i++) {
         try {
-            // ส่งรูปแบบ Basic ที่สุด ไม่ใส่ Header หรือ Credentials ให้ Google สับสน
-            const response = await fetch(GAS_URL, { 
+           const response = await fetch(GAS_URL, { 
                 method: 'POST', 
-                redirect: 'follow', // บังคับให้ตามลิงก์ Redirect 302 ของ Google
-                credentials: 'omit', // ป้องกันปัญหาบั๊กเมื่อล็อกอินบัญชี Google ค้างไว้หลายแอคเคาท์
-                headers: { 
-                    'Content-Type': 'text/plain;charset=utf-8' // สำคัญมาก: ป้องกันเบราว์เซอร์เตะเข้าโหมด CORS Preflight
-                }, 
+                redirect: 'follow', // บังคับให้ตามลิงก์ Redirect ของ Google
+                credentials: 'omit', // สำคัญมาก: ป้องกัน Error 404 (Not Found) จากปัญหา Google หลายบัญชี
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8' // สำคัญมาก: ป้องกันปัญหา CORS
+                },
                 body: JSON.stringify({ action: action, params: params, token: token }) 
             });
             
