@@ -9,11 +9,9 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
         try {
            const response = await fetch(GAS_URL, { 
                 method: 'POST', 
-                redirect: 'follow', // บังคับให้ตามลิงก์ Redirect ของ Google
-                credentials: 'omit', // สำคัญมาก: ป้องกัน Error 404 (Not Found) จากปัญหา Google หลายบัญชี
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8' // สำคัญมาก: ป้องกันปัญหา CORS
-                },
+                redirect: 'follow', 
+                credentials: 'omit', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: action, params: params, token: token }) 
             });
             
