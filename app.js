@@ -1,4 +1,3 @@
-// ================= Global Variables =================
 const SESSION_DURATION = 6 * 60 * 60 * 1000;
 let currentUser = '';
 
@@ -16,7 +15,10 @@ let filteredHistoryData = [];
 let histSortCol = 'invoiceNo';
 let histSortAsc = false;
 
-// ================= Caching & Loader System =================
+let tempPayloadForPDF = []; 
+let currentReceiptInvNo = ""; 
+let currentDocType = ""; 
+
 function showGlobalLoader(text = 'กำลังประมวลผลข้อมูล...') {
     const loader = document.getElementById('global-full-loader');
     const loaderText = document.getElementById('global-loader-text');
@@ -54,8 +56,8 @@ function getFromCache(key) {
 }
 
 function forceSyncAll() {
-    sessionStorage.removeItem('cache_billingData');
-    sessionStorage.removeItem('cache_historyData');
+    sessionStorage.removeItem('inv_cache_billingData');
+    sessionStorage.removeItem('inv_cache_historyData');
     rawBillingData = [];
     rawHistoryData = [];
     
@@ -66,7 +68,6 @@ function forceSyncAll() {
     }
 }
 
-// ================= UI Interactions & Listeners =================
 document.addEventListener('focusin', function(e) { 
     if (e.target.tagName === 'INPUT' && e.target.type === 'number') { 
         if (e.target.value === '0') {
@@ -88,7 +89,6 @@ document.addEventListener('focusout', function(e) {
 
 document.querySelectorAll('#pills-tab button').forEach(btn => {
     btn.addEventListener('click', function (event) { 
-        
         document.querySelectorAll('#pills-tab button').forEach(b => {
             b.classList.remove('active-audit', 'active-invoice', 'active-history');
         });
@@ -117,7 +117,6 @@ document.querySelectorAll('#pills-tab button').forEach(btn => {
     });
 });
 
-// ================= On Load & Login =================
 window.onload = function() {
     document.getElementById('loginPassword').addEventListener('keypress', function (e) { 
         if (e.key === 'Enter') {
@@ -126,9 +125,9 @@ window.onload = function() {
         }
     });
   
-    const storedUser = localStorage.getItem('billingUser'); 
-    const loginTime = localStorage.getItem('billingLoginTime');
-    const storedToken = localStorage.getItem('billingToken');
+    const storedUser = localStorage.getItem('invUser'); 
+    const loginTime = localStorage.getItem('invLoginTime');
+    const storedToken = localStorage.getItem('invToken');
   
     if (storedUser && loginTime && storedToken && (new Date().getTime() - parseInt(loginTime) < SESSION_DURATION)) {
         currentUser = storedUser; 
@@ -167,9 +166,9 @@ async function doLogin() {
         
         if (res.success) {
             currentUser = res.userName; 
-            localStorage.setItem('billingUser', currentUser); 
-            localStorage.setItem('billingToken', res.token); 
-            localStorage.setItem('billingLoginTime', new Date().getTime().toString());
+            localStorage.setItem('invUser', currentUser); 
+            localStorage.setItem('invToken', res.token); 
+            localStorage.setItem('invLoginTime', new Date().getTime().toString());
             
             document.getElementById('displayUser').innerText = currentUser;
             document.getElementById('loginSection').style.display = 'none'; 
@@ -197,9 +196,9 @@ async function doLogin() {
 }
 
 function logout() { 
-    localStorage.removeItem('billingUser'); 
-    localStorage.removeItem('billingLoginTime'); 
-    localStorage.removeItem('billingToken');
+    localStorage.removeItem('invUser'); 
+    localStorage.removeItem('invLoginTime'); 
+    localStorage.removeItem('invToken');
     sessionStorage.clear(); 
     currentUser = '';
     
@@ -214,7 +213,6 @@ function logout() {
     }
 }
 
-// ================= Data Loading =================
 async function loadBillingData(isLogin = false, forceSync = false) {
     if (!forceSync && rawBillingData.length > 0) {
         applyFilterAudit();
@@ -223,7 +221,7 @@ async function loadBillingData(isLogin = false, forceSync = false) {
     }
 
     if (!forceSync) {
-        let cachedData = getFromCache('cache_billingData');
+        let cachedData = getFromCache('inv_cache_billingData');
         if (cachedData) {
             rawBillingData = cachedData.raw;
             bkgTotalsGlobal = cachedData.totals;
@@ -243,6 +241,14 @@ async function loadBillingData(isLogin = false, forceSync = false) {
 
     try {
         const res = await callAPI('getPendingAndReadyBilling');
+        
+        if (res.error || res.success === false) {
+            if (res.message === "SESSION_EXPIRED" || res.error === "SESSION_EXPIRED") {
+                logout();
+                throw new Error("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+            }
+            throw new Error(res.message || res.error);
+        }
         
         rawBillingData = res.data; 
         bkgTotalsGlobal = res.bkgTotals || {}; 
@@ -289,7 +295,7 @@ async function loadBillingData(isLogin = false, forceSync = false) {
             }
         }
 
-        saveToCache('cache_billingData', {
+        saveToCache('inv_cache_billingData', {
             raw: rawBillingData,
             totals: bkgTotalsGlobal,
             audit: auditData,
@@ -345,7 +351,6 @@ function updateDropdowns(sourceData) {
     }
 }
 
-// ================= TAB 1 : Audit =================
 function applyFilterAudit() {
     let fSearch = document.getElementById('filterSearchA') ? document.getElementById('filterSearchA').value.toLowerCase() : '';
     let fCS = document.getElementById('filterCSA') ? document.getElementById('filterCSA').value.toLowerCase() : '';
@@ -727,7 +732,6 @@ async function saveAuditBulk() {
     });
 }
 
-// ================= TAB 2 : Ready for Invoice =================
 function applyFilterReady() {
     let fCust = document.getElementById('filterCustomerR') ? document.getElementById('filterCustomerR').value.toLowerCase() : ''; 
     let fText = document.getElementById('filterTextR') ? document.getElementById('filterTextR').value.toLowerCase() : '';
@@ -952,8 +956,6 @@ function revertBooking(bkg) {
     });
 }
 
-let tempPayloadForPDF = []; 
-
 async function generateInvoiceBulk() {
     let checkboxes = document.querySelectorAll('.bkg-check-r:checked'); 
     
@@ -1113,7 +1115,6 @@ async function confirmGeneratePDF() {
     }
 }
 
-// ================= TAB 3 : History & Edit =================
 async function loadHistory(forceSync = false) {
     if (!forceSync && rawHistoryData.length > 0) {
         applyHistoryFilter();
@@ -1121,7 +1122,7 @@ async function loadHistory(forceSync = false) {
     }
 
     if (!forceSync) {
-        let cachedData = getFromCache('cache_historyData');
+        let cachedData = getFromCache('inv_cache_historyData');
         if (cachedData) {
             rawHistoryData = cachedData;
             populateHistoryDropdowns(rawHistoryData);
@@ -1133,7 +1134,6 @@ async function loadHistory(forceSync = false) {
     document.getElementById('historyBody').innerHTML = '<tr><td colspan="7" class="text-center py-5 text-primary"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลดประวัติ (รายการล่าสุด)...</td></tr>';
     
     try {
-        // 1. Initial Load: ดึง 1000 รายการล่าสุด เพื่อให้หน้าจอแสดงผลได้เร็วที่สุด
         const initialData = await callAPI('getBilledHistory', { mode: 'initial' });
         
         if(initialData && initialData.error) { 
@@ -1145,7 +1145,6 @@ async function loadHistory(forceSync = false) {
         populateHistoryDropdowns(rawHistoryData);
         applyHistoryFilter(); 
         
-        // 2. Background Load: เรียกโหลดข้อมูลทั้งหมดแบบเงียบๆ ไม่เอา Loader ขึ้นมากวนหน้าจอ
         fetchFullHistoryInBackground();
         
     } catch(err) { 
@@ -1155,17 +1154,14 @@ async function loadHistory(forceSync = false) {
 
 async function fetchFullHistoryInBackground() {
     try {
-        // เรียก API โดยปิด showLoader (พารามิเตอร์ที่ 4 เป็น false)
         const fullData = await callAPI('getBilledHistory', { mode: 'full' }, 2, false);
         
         if (fullData && !fullData.error) {
             rawHistoryData = fullData;
-            saveToCache('cache_historyData', rawHistoryData);
+            saveToCache('inv_cache_historyData', rawHistoryData);
             
-            // อัปเดต Dropdown และตัวกรองให้มีข้อมูลครบถ้วนแบบเงียบๆ
             populateHistoryDropdowns(rawHistoryData);
             
-            // หากผู้ใช้อยู่ในหน้า History พอดี ก็รีเฟรชตารางให้มีข้อมูลครบ
             if (document.getElementById('tab-history').classList.contains('active-history')) {
                 applyHistoryFilter();
             }
@@ -1715,9 +1711,6 @@ async function printPDF(docNo) {
        Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); 
    }
 }
-
-let currentReceiptInvNo = ""; 
-let currentDocType = ""; 
 
 function openReceiptModal(invNo, docType) {
     currentReceiptInvNo = invNo; 
