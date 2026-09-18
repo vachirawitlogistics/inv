@@ -1,4 +1,4 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwnPUd6WiFNs_jMwR2W8nJbT-iH3o2AKy1owdIcT1L5SEdn1exyarqzPnSHm5gaK_Cj/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyiugspGphfRFBGWOAptcenyZ6Rp5QGHxwyvuOBdmYiLKuJKWzMi-sjodlsLuBw6xXZ/exec';
 
 // เพิ่ม parameter showLoader เพื่อสั่งเปิด/ปิด หน้าจอโหลดหมุนๆ
 async function callAPI(action, params = {}, retries = 2, showLoader = true) {
