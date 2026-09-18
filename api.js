@@ -1,13 +1,13 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwnPUd6WiFNs_jMwR2W8nJbT-iH3o2AKy1owdIcT1L5SEdn1exyarqzPnSHm5gaK_Cj/exec';
 
 async function callAPI(action, params = {}, retries = 5, showLoader = true) {
-    const token = localStorage.getItem('billingToken');
+    const token = localStorage.getItem('invToken');
     
     if (showLoader && typeof showGlobalLoader === 'function') showGlobalLoader();
     
     for (let i = 0; i <= retries; i++) {
         try {
-           const response = await fetch(GAS_URL, { 
+            const response = await fetch(GAS_URL, { 
                 method: 'POST', 
                 redirect: 'follow', 
                 credentials: 'omit', 
@@ -17,7 +17,6 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
             
             const result = await response.json();
             
-            // ถ้าระบบบอกว่าติดคิวคนอื่นอยู่ ให้โยน Error เพื่อเตะเข้ากระบวนการลองใหม่ (catch)
             if (result && result.success === false && result.message && result.message.includes("เซิร์ฟเวอร์กำลังประมวลผล")) {
                 throw new Error("SERVER_BUSY");
             }
@@ -26,7 +25,6 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
             return result;
             
         } catch (error) { 
-            // ถ้ารอบสุดท้าย (ครบ 5 ครั้ง หรือประมาณ 15 วินาที) แล้วยังไม่ได้ ค่อยแจ้งเตือน
             if (i === retries) {
                 if (showLoader && typeof hideGlobalLoader === 'function') hideGlobalLoader();
                 return { 
@@ -34,7 +32,6 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
                     message: error.message === "SERVER_BUSY" ? "ระบบมีผู้ใช้งานหนาแน่น กรุณาลองใหม่อีกครั้งครับ" : error.toString() 
                 };
             }
-            // ถ้ายังไม่ครบ 5 รอบ ให้หยุดรอ 3 วินาที แล้ววนลูปยิงไปใหม่เงียบๆ
             await new Promise(resolve => setTimeout(resolve, 3000)); 
         }
     }
