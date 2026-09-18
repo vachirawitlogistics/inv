@@ -10,6 +10,11 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
             // ส่งรูปแบบ Basic ที่สุด ไม่ใส่ Header หรือ Credentials ให้ Google สับสน
             const response = await fetch(GAS_URL, { 
                 method: 'POST', 
+                redirect: 'follow', // บังคับให้ตามลิงก์ Redirect 302 ของ Google
+                credentials: 'omit', // ป้องกันปัญหาบั๊กเมื่อล็อกอินบัญชี Google ค้างไว้หลายแอคเคาท์
+                headers: { 
+                    'Content-Type': 'text/plain;charset=utf-8' // สำคัญมาก: ป้องกันเบราว์เซอร์เตะเข้าโหมด CORS Preflight
+                }, 
                 body: JSON.stringify({ action: action, params: params, token: token }) 
             });
             
