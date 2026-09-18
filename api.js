@@ -7,10 +7,9 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
     
     for (let i = 0; i <= retries; i++) {
         try {
+            // ใช้โครงสร้างพื้นฐานที่สุด เพื่อป้องกันการโดน Google บล็อก
             const response = await fetch(GAS_URL, { 
                 method: 'POST', 
-                redirect: 'follow', 
-                credentials: 'omit', 
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: action, params: params, token: token }) 
             });
