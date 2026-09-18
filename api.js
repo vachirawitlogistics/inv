@@ -1,9 +1,12 @@
-// URL ที่ยิงไปยัง Google Apps Script (API)
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyiugspGphfRFBGWOAptcenyZ6Rp5QGHxwyvuOBdmYiLKuJKWzMi-sjodlsLuBw6xXZ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwnPUd6WiFNs_jMwR2W8nJbT-iH3o2AKy1owdIcT1L5SEdn1exyarqzPnSHm5gaK_Cj/exec';
 
-
-async function callAPI(action, params = {}, retries = 2) {
+// เพิ่ม parameter showLoader เพื่อสั่งเปิด/ปิด หน้าจอโหลดหมุนๆ
+async function callAPI(action, params = {}, retries = 2, showLoader = true) {
     const token = localStorage.getItem('billingToken');
+    
+    if (showLoader && typeof showGlobalLoader === 'function') {
+        showGlobalLoader();
+    }
     
     for (let i = 0; i <= retries; i++) {
         try {
@@ -19,26 +22,25 @@ async function callAPI(action, params = {}, retries = 2) {
             
             const result = await response.json();
             
-            if (result && (result.error || result.success === false)) {
-                let errText = result.error || result.message || "Unknown API Error";
-                
-                // หาก Token หมดอายุให้เตะกลับไปหน้า Login
-                if (errText.includes("SESSION_EXPIRED")) {
+            if (result && result.error && !result.success && !result.message) {
+                if (result.error.includes("SESSION_EXPIRED")) {
                     logout();
                     throw new Error("Session หมดอายุ กรุณาล็อกอินใหม่");
                 }
-                throw new Error(errText);
+                throw new Error(result.error);
             }
             
+            if (showLoader && typeof hideGlobalLoader === 'function') hideGlobalLoader();
             return result;
             
         } catch (error) { 
-            // หากหมดโควต้า Retry หรือเป็น Error เรื่อง Session ให้ throw ทันที
             if (i === retries || error.message.includes("Session หมดอายุ")) {
+                if (showLoader && typeof hideGlobalLoader === 'function') hideGlobalLoader();
                 throw new Error('API Error: ' + error.message); 
             }
-            // รอเวลาแบบหน่วงเพิ่มขึ้น (Exponential Backoff) ก่อนลองยิง API ใหม่
             await new Promise(r => setTimeout(r, 1000 * (i + 1))); 
         }
     }
+    
+    if (showLoader && typeof hideGlobalLoader === 'function') hideGlobalLoader();
 }

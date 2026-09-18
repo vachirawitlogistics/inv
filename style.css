@@ -6,7 +6,7 @@
   --secondary: #64748b;
   --success: #10b981;
   --danger: #ef4444;
-  --warning: #f59e0b;       
+  --warning: #f59e0b;       /* Amber 500 - สีส้มเตือน/ขนส่ง */
   --info: #0ea5e9;
   --bg-color: #f8fafc;
   --surface: #ffffff;
@@ -38,10 +38,33 @@ body {
   100% { background-position: 0% 50%; } 
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar { 
+    width: 6px; 
+    height: 6px; 
+}
+::-webkit-scrollbar-track { 
+    background: transparent; 
+}
+::-webkit-scrollbar-thumb { 
+    background: #cbd5e1; 
+    border-radius: 10px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+    background: #94a3b8; 
+}
+
+/* ================= GLOBAL LOADER ป้องกันการกดปุ่มซ้ำ ================= */
+.global-loader-wrapper {
+  position: fixed; 
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(15, 23, 42, 0.7); 
+  backdrop-filter: blur(5px); 
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 10000;
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+}
 
 /* ================= LOGIN ANIMATION (Logistics Theme) ================= */
 .login-wrapper {
@@ -68,7 +91,8 @@ body {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px); 
+  -webkit-backdrop-filter: blur(24px);
   animation: cardEntrance 1.2s cubic-bezier(0.16, 1, 0.3, 1), floatCard 6s ease-in-out infinite;
   width: 100%; max-width: 420px; padding: 3rem 2rem; border-radius: var(--radius-lg);
 }
@@ -90,6 +114,7 @@ body {
   transform: rotate(-10deg); transition: transform 0.4s;
 }
 .login-card:hover .login-icon-bg { transform: rotate(0deg) scale(1.1); }
+
 .pulse-anim { animation: iconPulse 2s infinite; }
 @keyframes iconPulse { 
   0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); } 
@@ -97,8 +122,15 @@ body {
   100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } 
 }
 
-.text-gradient { background: linear-gradient(to right, #93c5fd, #fcd34d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.text-light-50 { color: rgba(255, 255, 255, 0.5); letter-spacing: 2px; }
+.text-gradient { 
+    background: linear-gradient(to right, #93c5fd, #fcd34d); 
+    -webkit-background-clip: text; 
+    -webkit-text-fill-color: transparent; 
+}
+.text-light-50 { 
+    color: rgba(255, 255, 255, 0.5); 
+    letter-spacing: 2px; 
+}
 
 .login-input-group .form-control { 
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); 
@@ -119,9 +151,14 @@ body {
   background: linear-gradient(45deg, #1d4ed8, #3b82f6, #1d4ed8); background-size: 200% auto; 
   border: none; color: white; border-radius: 12px; transition: 0.5s; position: relative; overflow: hidden;
 }
-.btn-login:hover { background-position: right center; color: white; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5); transform: translateY(-3px); }
+.btn-login:hover { 
+    background-position: right center; color: white; 
+    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5); 
+    transform: translateY(-3px); 
+}
 .animate-fly { display: inline-block; transition: 0.4s; }
 .btn-login:hover .animate-fly { transform: translate(5px, -5px); }
+
 /* ================= END LOGIN ANIMATION ================= */
 
 #mainApp { 
@@ -149,7 +186,9 @@ body {
   border: 1px solid var(--border-color);
 }
 
-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+table { 
+    width: 100%; border-collapse: separate; border-spacing: 0; 
+}
 
 thead th { 
   position: sticky; 
@@ -213,6 +252,7 @@ td {
   color: white !important; 
   box-shadow: var(--shadow-hover); 
 }
+
 .summary-box.grand-total .text-primary, 
 .summary-box.grand-total .text-muted { color: rgba(255,255,255,0.9) !important; }
 .summary-box.grand-total .text-dark { color: #ffffff !important; }
@@ -249,7 +289,9 @@ td {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); 
 }
 
-.form-control-sm, .form-select-sm { padding: 5px 8px; font-size: 0.78rem; border-radius: 6px;}
+.form-control-sm, .form-select-sm { 
+    padding: 5px 8px; font-size: 0.78rem; border-radius: 6px;
+}
 
 .floating-nav { 
   background: rgba(255,255,255,0.9); 
@@ -269,12 +311,15 @@ td {
   font-size: 0.8rem; 
   transition: all 0.2s;
 }
+
 .nav-pills .nav-link:hover { background-color: #f1f5f9; color: var(--primary); }
 .nav-pills .nav-link.active-audit { background: var(--primary); color: white; box-shadow: var(--shadow-hover); }
 .nav-pills .nav-link.active-invoice { background: var(--info); color: white; box-shadow: 0 8px 20px -5px rgba(14, 165, 233, 0.2); }
 .nav-pills .nav-link.active-history { background: #334155; color: white; box-shadow: 0 8px 20px -5px rgba(51, 65, 85, 0.2); }
 
-.btn { border-radius: var(--radius-sm); font-weight: 500; padding: 6px 14px; font-size: 0.8rem; transition: all 0.2s; letter-spacing: 0.3px; }
+.btn { 
+    border-radius: var(--radius-sm); font-weight: 500; padding: 6px 14px; font-size: 0.8rem; transition: all 0.2s; letter-spacing: 0.3px; 
+}
 .btn-rounded { border-radius: 50px; }
 .btn-primary { background: var(--primary); border: none; }
 .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-hover); }
@@ -285,7 +330,16 @@ td {
 .form-switch .form-check-input:focus { border-color: var(--primary); box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.2); }
 .form-switch .form-check-input:checked { background-color: var(--primary); border-color: var(--primary); }
 
-.dropdown-menu { box-shadow: 0 8px 25px -5px rgba(0,0,0,0.1) !important; border-radius: var(--radius-sm); min-width: 190px; font-size: 0.78rem; padding: 6px; z-index: 1050; border: 1px solid rgba(255,255,255,0.8); backdrop-filter: blur(10px); }
+.dropdown-menu { 
+    box-shadow: 0 8px 25px -5px rgba(0,0,0,0.1) !important; 
+    border-radius: var(--radius-sm); 
+    min-width: 190px; 
+    font-size: 0.78rem; 
+    padding: 6px; 
+    z-index: 1050; 
+    border: 1px solid rgba(255,255,255,0.8); 
+    backdrop-filter: blur(10px); 
+}
 .dropdown-item { border-radius: 6px; padding: 6px 10px; margin-bottom: 2px; transition: all 0.2s; cursor: pointer; font-weight: 500; color: #475569; font-size: 0.78rem; }
 .dropdown-item:hover { background-color: #f1f5f9; color: var(--primary); transform: translateX(2px); }
 .dropdown-header { font-size: 0.65rem; padding: 4px 10px 4px; font-weight: 700; color: #94a3b8 !important; letter-spacing: 0.5px; text-transform: uppercase; }

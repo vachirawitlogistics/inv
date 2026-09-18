@@ -16,8 +16,57 @@ let filteredHistoryData = [];
 let histSortCol = 'invoiceNo';
 let histSortAsc = false;
 
-// ================= UI Interactions & Listeners =================
+// ================= Caching & Loader System =================
+function showGlobalLoader(text = 'กำลังประมวลผลข้อมูล...') {
+    const loader = document.getElementById('global-full-loader');
+    const loaderText = document.getElementById('global-loader-text');
+    if (loader && loaderText) {
+        loaderText.innerText = text;
+        loader.style.display = 'flex';
+    }
+}
 
+function hideGlobalLoader() {
+    const loader = document.getElementById('global-full-loader');
+    if (loader) {
+        loader.style.display = 'none';
+    }
+}
+
+function saveToCache(key, data) {
+    sessionStorage.setItem(key, JSON.stringify({
+        timestamp: Date.now(),
+        data: data
+    }));
+}
+
+function getFromCache(key) {
+    const cacheTimeLimit = 15 * 60 * 1000; 
+    let cached = sessionStorage.getItem(key);
+    if (!cached) return null;
+    
+    let parsed = JSON.parse(cached);
+    if (Date.now() - parsed.timestamp > cacheTimeLimit) {
+        sessionStorage.removeItem(key);
+        return null;
+    }
+    return parsed.data;
+}
+
+function forceSyncAll() {
+    sessionStorage.removeItem('cache_billingData');
+    sessionStorage.removeItem('cache_historyData');
+    rawBillingData = [];
+    rawHistoryData = [];
+    
+    loadBillingData(false, true);
+    
+    if (document.getElementById('tab-history').classList.contains('active-history')) {
+        loadHistory(true);
+    }
+}
+
+// ================= UI Interactions & Listeners =================
 document.addEventListener('focusin', function(e) { 
     if (e.target.tagName === 'INPUT' && e.target.type === 'number') { 
         if (e.target.value === '0') {
@@ -70,10 +119,9 @@ document.querySelectorAll('#pills-tab button').forEach(btn => {
 
 // ================= On Load & Login =================
 window.onload = function() {
-    // ให้กด Enter ในช่องรหัสผ่านแล้วเข้าทำงานฟังก์ชัน doLogin
     document.getElementById('loginPassword').addEventListener('keypress', function (e) { 
         if (e.key === 'Enter') {
-            e.preventDefault(); // ป้องกันการรีเฟรชหน้าเว็บกรณีติดฟอร์ม
+            e.preventDefault(); 
             doLogin(); 
         }
     });
@@ -87,6 +135,7 @@ window.onload = function() {
         document.getElementById('displayUser').innerText = currentUser;
         document.getElementById('loginSection').style.display = 'none'; 
         document.getElementById('mainApp').style.display = 'flex';
+        
         loadBillingData(true); 
     }
 };
@@ -106,18 +155,15 @@ async function doLogin() {
         });
     }
 
-    // ป้องกันการกดปุ่มหรือ Enter เบิ้ล (ถ้าปุ่มถูกปิดอยู่ ให้หยุดการทำงานทันที)
     if (btn.disabled) return;
     
-    // ล็อกหน้าตาปุ่มต้นฉบับไว้ตายตัว
     const originalBtnHTML = `<span class="fw-bold fs-6 tracking-wide">AUTHENTICATE</span> <i class="bi bi-rocket-takeoff-fill ms-2 animate-fly"></i>`;
     
-    // เปลี่ยนปุ่มให้เป็น Loading Spinner เพื่อให้รู้ว่ากดติดแล้ว และป้องกันการกดซ้ำ
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span class="fw-bold fs-6 tracking-wide">กำลังเข้าสู่ระบบ...</span>`;
     btn.disabled = true;
     
     try {
-        const res = await callAPI('verifyLogin', { password: pwd }, 0);
+        const res = await callAPI('verifyLogin', { password: pwd }, 0, false);
         
         if (res.success) {
             currentUser = res.userName; 
@@ -129,26 +175,22 @@ async function doLogin() {
             document.getElementById('loginSection').style.display = 'none'; 
             document.getElementById('mainApp').style.display = 'flex';
             
-            // คืนค่าปุ่มกลับมาเผื่อในกรณีที่ล็อกเอาท์ออกมา
             btn.innerHTML = originalBtnHTML;
             btn.disabled = false;
-                document.getElementById('loginPassword').value = '';    
-                setTimeout(() => {
-                    loadBillingData(true); 
-                }, 1000);
-            } else { 
+            document.getElementById('loginPassword').value = '';
+            
+            loadBillingData(true); 
+        } else { 
             Swal.fire({
                 icon: 'error', 
                 text: res.message, 
                 customClass: {popup: 'rounded-4'}
             }); 
-            // คืนค่าปุ่มกลับมาเหมือนเดิมเพื่อให้กดใหม่ได้
             btn.innerHTML = originalBtnHTML;
             btn.disabled = false;
         }
     } catch(err) { 
         Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); 
-        // คืนค่าปุ่มกลับมาเหมือนเดิมเพื่อให้กดใหม่ได้
         btn.innerHTML = originalBtnHTML;
         btn.disabled = false;
     }
@@ -158,34 +200,51 @@ function logout() {
     localStorage.removeItem('billingUser'); 
     localStorage.removeItem('billingLoginTime'); 
     localStorage.removeItem('billingToken');
+    sessionStorage.clear(); 
     currentUser = '';
     
     document.getElementById('loginPassword').value = ''; 
     document.getElementById('mainApp').style.display = 'none'; 
     document.getElementById('loginSection').style.display = 'block'; 
     
-    // คืนค่าปุ่มเข้าสู่ระบบกลับมาเหมือนเดิม
     const btn = document.querySelector('.btn-login');
     if (btn) {
         btn.innerHTML = `<span class="fw-bold fs-6 tracking-wide">AUTHENTICATE</span> <i class="bi bi-rocket-takeoff-fill ms-2 animate-fly"></i>`;
-        
+        btn.disabled = false;
     }
 }
 
 // ================= Data Loading =================
-async function loadBillingData(isLogin = false) {
-    Swal.fire({ 
-        title: 'กำลังซิงค์ข้อมูล...', 
-        text: 'กำลังโหลดข้อมูลจากคลาวด์', 
-        allowOutsideClick: false, 
-        didOpen: () => Swal.showLoading(), 
-        customClass: {popup: 'rounded-4'} 
-    });
-    
+async function loadBillingData(isLogin = false, forceSync = false) {
+    if (!forceSync && rawBillingData.length > 0) {
+        applyFilterAudit();
+        applyFilterReady();
+        return;
+    }
+
+    if (!forceSync) {
+        let cachedData = getFromCache('cache_billingData');
+        if (cachedData) {
+            rawBillingData = cachedData.raw;
+            bkgTotalsGlobal = cachedData.totals;
+            auditData = cachedData.audit;
+            readyData = cachedData.ready;
+            
+            updateDropdowns(rawBillingData);
+            applyFilterAudit();
+            applyFilterReady();
+            
+            if (document.getElementById('tab-history').classList.contains('active-history')) {
+                loadHistory(); 
+            }
+            return;
+        }
+    }
+
     try {
         const res = await callAPI('getPendingAndReadyBilling');
         
-        rawBillingData = res.data || [];
+        rawBillingData = res.data; 
         bkgTotalsGlobal = res.bkgTotals || {}; 
         
         auditData = []; 
@@ -229,27 +288,15 @@ async function loadBillingData(isLogin = false) {
                 }
             }
         }
+
+        saveToCache('cache_billingData', {
+            raw: rawBillingData,
+            totals: bkgTotalsGlobal,
+            audit: auditData,
+            ready: readyData
+        });
         
-        let allCust = [...new Set(rawBillingData.slice(1).map(r => r[4]).filter(v => v))]; 
-        let ddlCust = '<option value="">- ลูกค้าทั้งหมด -</option>'; 
-        allCust.forEach(c => ddlCust += `<option value="${c}">${c}</option>`);
-        
-        if(document.getElementById('filterCustomerA')) {
-            document.getElementById('filterCustomerA').innerHTML = ddlCust; 
-        }
-        if(document.getElementById('filterCustomerR')) {
-            document.getElementById('filterCustomerR').innerHTML = ddlCust;
-        }
-        
-        let allCS = [...new Set(rawBillingData.slice(1).map(r => r[1]).filter(v => v))]; 
-        let ddlCS = '<option value="">- CS ทั้งหมด -</option>'; 
-        allCS.forEach(c => ddlCS += `<option value="${c}">${c}</option>`);
-        
-        if(document.getElementById('filterCSA')) {
-            document.getElementById('filterCSA').innerHTML = ddlCS;
-        }
-        
-        Swal.close(); 
+        updateDropdowns(rawBillingData);
         applyFilterAudit(); 
         applyFilterReady();
         
@@ -264,10 +311,9 @@ async function loadBillingData(isLogin = false) {
             }
         }
         
-        const compList = await callAPI('getCompanyList'); 
+        const compList = await callAPI('getCompanyList', {}, 2, false); 
         let cHtml = ''; 
         compList.forEach(c => cHtml += `<option value="${c}">`);
-        
         let mList = document.getElementById('modalCompanyList'); 
         if(mList) {
             mList.innerHTML = cHtml;
@@ -275,6 +321,27 @@ async function loadBillingData(isLogin = false) {
         
     } catch(err) { 
         Swal.fire('ซิงค์ข้อมูลไม่สำเร็จ', err.message, 'error'); 
+    }
+}
+
+function updateDropdowns(sourceData) {
+    let allCust = [...new Set(sourceData.slice(1).map(r => r[4]).filter(v => v))]; 
+    let ddlCust = '<option value="">- ลูกค้าทั้งหมด -</option>'; 
+    allCust.forEach(c => ddlCust += `<option value="${c}">${c}</option>`);
+    
+    if(document.getElementById('filterCustomerA')) {
+        document.getElementById('filterCustomerA').innerHTML = ddlCust; 
+    }
+    if(document.getElementById('filterCustomerR')) {
+        document.getElementById('filterCustomerR').innerHTML = ddlCust;
+    }
+    
+    let allCS = [...new Set(sourceData.slice(1).map(r => r[1]).filter(v => v))]; 
+    let ddlCS = '<option value="">- CS ทั้งหมด -</option>'; 
+    allCS.forEach(c => ddlCS += `<option value="${c}">${c}</option>`);
+    
+    if(document.getElementById('filterCSA')) {
+        document.getElementById('filterCSA').innerHTML = ddlCS;
     }
 }
 
@@ -322,7 +389,13 @@ function renderAuditTab() {
         let bkg = r[6]; 
         
         if(!grouped[bkg]) {
-            grouped[bkg] = { cs: r[1], customer: r[4], date: r[0], items: [], sumTot: 0 }; 
+            grouped[bkg] = { 
+                cs: r[1], 
+                customer: r[4], 
+                date: r[0], 
+                items: [], 
+                sumTot: 0 
+            }; 
         }
         
         grouped[bkg].items.push(obj); 
@@ -338,7 +411,14 @@ function renderAuditTab() {
 
     for (let bkg of bkgKeys) {
         let group = grouped[bkg]; 
-        let dateStr = new Date(group.date).toLocaleDateString('en-GB'); 
+        let dateStr = "";
+        
+        try {
+            dateStr = new Date(group.date).toLocaleDateString('en-GB'); 
+        } catch(e) {
+            dateStr = group.date;
+        }
+        
         let totalInSystem = bkgTotalsGlobal[bkg] || group.items.length;
         let badgeClass = group.items.length < totalInSystem ? 'bg-warning bg-opacity-25 text-warning border border-warning' : 'bg-secondary bg-opacity-10 text-secondary';
         let safeBkg = 'bkg_' + bkg.replace(/[^a-zA-Z0-9]/g, '_');
@@ -627,13 +707,6 @@ async function saveAuditBulk() {
         customClass: {popup: 'rounded-4'}
     }).then(async result => {
         if(result.isConfirmed) {
-            Swal.fire({ 
-                title: 'กำลังบันทึก...', 
-                allowOutsideClick: false, 
-                didOpen: () => Swal.showLoading(), 
-                customClass: {popup: 'rounded-4'} 
-            });
-            
             try { 
                 const res = await callAPI('saveAuditData', { payload: payloadData }); 
                 if(res.success) { 
@@ -643,7 +716,7 @@ async function saveAuditBulk() {
                         text: res.message, 
                         customClass: {popup: 'rounded-4'}
                     }); 
-                    loadBillingData(); 
+                    forceSyncAll();
                 } else { 
                     Swal.fire('เกิดข้อผิดพลาด', res.message, 'error'); 
                 } 
@@ -674,8 +747,13 @@ function applyFilterReady() {
 }
 
 function clearFilterReady() { 
-    if(document.getElementById('filterCustomerR')) document.getElementById('filterCustomerR').value = ''; 
-    if(document.getElementById('filterTextR')) document.getElementById('filterTextR').value = ''; 
+    if(document.getElementById('filterCustomerR')) {
+        document.getElementById('filterCustomerR').value = ''; 
+    }
+    if(document.getElementById('filterTextR')) {
+        document.getElementById('filterTextR').value = ''; 
+    }
+    
     applyFilterReady(); 
 }
 
@@ -695,7 +773,15 @@ function renderReadyTab() {
         let bkg = r[6]; 
         
         if(!groupedReadyGlobal[bkg]) {
-            groupedReadyGlobal[bkg] = { cs: r[1], customer: r[4], date: r[0], items: [], sumInc: 0, sumAdv: 0, sumTot: 0 };
+            groupedReadyGlobal[bkg] = { 
+                cs: r[1], 
+                customer: r[4], 
+                date: r[0], 
+                items: [], 
+                sumInc: 0, 
+                sumAdv: 0, 
+                sumTot: 0 
+            };
         }
         
         groupedReadyGlobal[bkg].items.push(obj); 
@@ -713,7 +799,14 @@ function renderReadyTab() {
 
     for (let bkg of bkgKeys) {
         let group = groupedReadyGlobal[bkg]; 
-        let dateStr = new Date(group.date).toLocaleDateString('en-GB'); 
+        
+        let dateStr = "";
+        try {
+            dateStr = new Date(group.date).toLocaleDateString('en-GB'); 
+        } catch(e) {
+            dateStr = group.date;
+        }
+
         let totalInSystem = bkgTotalsGlobal[bkg] || group.items.length;
         let badgeClass = group.items.length < totalInSystem ? 'bg-warning bg-opacity-25 text-warning border border-warning' : 'bg-secondary bg-opacity-10 text-secondary';
         let safeBkg = 'bkg_' + bkg.replace(/[^a-zA-Z0-9]/g, '_');
@@ -839,26 +932,19 @@ function revertBooking(bkg) {
         customClass: {popup: 'rounded-4'}
     }).then(async res => {
         if(res.isConfirmed) {
-            Swal.fire({ 
-                title: 'กำลังดำเนินการ...', 
-                allowOutsideClick: false, 
-                didOpen: () => Swal.showLoading(), 
-                customClass: {popup: 'rounded-4'} 
-            });
-            
             try { 
                 const r = await callAPI('revertToAudit', { bookingNo: bkg }); 
                 if(r.success) { 
-                    Swal.fire({
+                    Swal.fire({ 
                         icon: 'success', 
                         title: 'สำเร็จ', 
                         text: r.message, 
-                        customClass: {popup: 'rounded-4'}
+                        customClass: {popup: 'rounded-4'} 
                     }); 
-                    loadBillingData(); 
-                } else { 
+                    forceSyncAll();
+                } else {
                     Swal.fire('เกิดข้อผิดพลาด', r.message, 'error'); 
-                } 
+                }
             } catch(err) { 
                 Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); 
             }
@@ -872,11 +958,11 @@ async function generateInvoiceBulk() {
     let checkboxes = document.querySelectorAll('.bkg-check-r:checked'); 
     
     if(checkboxes.length === 0) {
-        return Swal.fire({
+        return Swal.fire({ 
             icon: 'warning', 
             title: 'ยังไม่ได้เลือกรายการ', 
             text: 'กรุณาเลือก Booking เพื่อออก Invoice', 
-            customClass: {popup: 'rounded-4'}
+            customClass: {popup: 'rounded-4'} 
         });
     }
     
@@ -919,48 +1005,37 @@ async function generateInvoiceBulk() {
                    advTotal: obj.advTot, 
                    grandTotal: obj.grandTot
                 }); 
-                
                 sumTotal += obj.grandTot;
             });
         }
     });
 
-    if(custSet.size > 1) { 
-        return Swal.fire({
+    if(custSet.size > 1) {
+        return Swal.fire({ 
             icon: 'error', 
             title: 'ไม่สามารถรวมบิลได้', 
             text: 'ต้องเลือกลูกค้า (Bill To) เจ้าเดียวกันเพื่อรวมบิล 1 ใบ', 
-            customClass: {popup: 'rounded-4'}
+            customClass: {popup: 'rounded-4'} 
         }); 
     }
     
     let rawCustomerName = Array.from(custSet)[0];
     
-    Swal.fire({ 
-        title: 'กำลังโหลดข้อมูล...', 
-        allowOutsideClick: false, 
-        didOpen: () => Swal.showLoading(), 
-        customClass: {popup: 'rounded-4'} 
-    });
-
     try {
-        const res = await callAPI('getFullCustomerNameForPopup', { searchName: rawCustomerName }); 
-        Swal.close();
-        
+        const res = await callAPI('getFullCustomerNameForPopup', { searchName: rawCustomerName }, 2, false); 
         let finalNameToShow = res.officialName ? res.officialName : rawCustomerName;
+        
         document.getElementById('modBillToName').value = finalNameToShow; 
         document.getElementById('modCount').innerText = tempPayloadForPDF.length;
         document.getElementById('modTotal').innerText = '฿' + sumTotal.toLocaleString(undefined, {minimumFractionDigits:2});
         
         let today = new Date(); 
         document.getElementById('modInvoiceDate').value = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
-        
         document.getElementById('modSplitInvoice').checked = false; 
         document.getElementById('modCustomInvNo').value = ''; 
         
         new bootstrap.Modal(document.getElementById('invoiceSettingModal')).show();
     } catch(err) {
-        Swal.close(); 
         document.getElementById('modBillToName').value = rawCustomerName; 
         document.getElementById('modCustomInvNo').value = ''; 
         new bootstrap.Modal(document.getElementById('invoiceSettingModal')).show();
@@ -974,18 +1049,15 @@ async function confirmGeneratePDF() {
     let customInvNo = document.getElementById('modCustomInvNo').value.trim(); 
     
     if(!invDate || !finalBillTo) {
-        return Swal.fire({
+        return Swal.fire({ 
             icon: 'warning', 
             text: 'กรุณาระบุวันที่และชื่อลูกค้า', 
-            customClass: {popup: 'rounded-4'}
+            customClass: {popup: 'rounded-4'} 
         });
     }
     
     tempPayloadForPDF.forEach(item => { item.customer = finalBillTo; });
     
-    document.getElementById('loadingGenPDF').style.display = 'block'; 
-    document.getElementById('btnConfirmGen').disabled = true;
-
     try {
         const res = await callAPI('generateInvoicePDF', { 
             payload: tempPayloadForPDF, 
@@ -994,9 +1066,6 @@ async function confirmGeneratePDF() {
             isSplit: isSplit, 
             customInvNo: customInvNo 
         });
-        
-        document.getElementById('loadingGenPDF').style.display = 'none'; 
-        document.getElementById('btnConfirmGen').disabled = false;
         
         if(res.success) {
             bootstrap.Modal.getInstance(document.getElementById('invoiceSettingModal')).hide();
@@ -1028,58 +1097,97 @@ async function confirmGeneratePDF() {
                 customClass: {popup: 'rounded-4'}, 
                 didClose: () => { 
                     document.getElementById('tab-history').click(); 
-                    loadBillingData(); 
+                    forceSyncAll();
                 } 
             });
         } else { 
-            Swal.fire({
+            Swal.fire({ 
                 icon: 'error', 
                 title: 'เกิดข้อผิดพลาด', 
                 text: res.message, 
-                customClass: {popup: 'rounded-4'}
+                customClass: {popup: 'rounded-4'} 
             }); 
         }
     } catch(err) {
-        document.getElementById('loadingGenPDF').style.display = 'none'; 
-        document.getElementById('btnConfirmGen').disabled = false; 
         Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
     }
 }
 
 // ================= TAB 3 : History & Edit =================
-async function loadHistory() {
-    document.getElementById('historyBody').innerHTML = '<tr><td colspan="7" class="text-center py-5 text-primary"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลดประวัติ...</td></tr>';
+async function loadHistory(forceSync = false) {
+    if (!forceSync && rawHistoryData.length > 0) {
+        applyHistoryFilter();
+        return;
+    }
+
+    if (!forceSync) {
+        let cachedData = getFromCache('cache_historyData');
+        if (cachedData) {
+            rawHistoryData = cachedData;
+            populateHistoryDropdowns(rawHistoryData);
+            applyHistoryFilter();
+            return;
+        }
+    }
+
+    document.getElementById('historyBody').innerHTML = '<tr><td colspan="7" class="text-center py-5 text-primary"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลดประวัติ (รายการล่าสุด)...</td></tr>';
     
     try {
-        const data = await callAPI('getBilledHistory');
+        // 1. Initial Load: ดึง 1000 รายการล่าสุด เพื่อให้หน้าจอแสดงผลได้เร็วที่สุด
+        const initialData = await callAPI('getBilledHistory', { mode: 'initial' });
         
-        if(data && data.error) { 
-            document.getElementById('historyBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${data.error}</td></tr>`; 
+        if(initialData && initialData.error) { 
+            document.getElementById('historyBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${initialData.error}</td></tr>`; 
             return; 
         }
         
-        rawHistoryData = data;
-        
-        let customers = [...new Set(data.map(r => r.customer).filter(v => v))]; 
-        let ddlCust = '<option value="">- ลูกค้าทั้งหมด -</option>'; 
-        customers.forEach(c => ddlCust += `<option value="${c}">${c}</option>`); 
-        
-        if(document.getElementById('hFilterCustomer')) {
-            document.getElementById('hFilterCustomer').innerHTML = ddlCust;
-        }
-        
-        let csList = [...new Set(data.map(r => r.cs).filter(v => v && v !== '-'))]; 
-        let ddlCS = '<option value="">- CS ทั้งหมด -</option>'; 
-        csList.forEach(c => ddlCS += `<option value="${c}">${c}</option>`); 
-        
-        if(document.getElementById('hFilterCS')) {
-            document.getElementById('hFilterCS').innerHTML = ddlCS;
-        }
-        
+        rawHistoryData = initialData;
+        populateHistoryDropdowns(rawHistoryData);
         applyHistoryFilter(); 
+        
+        // 2. Background Load: เรียกโหลดข้อมูลทั้งหมดแบบเงียบๆ ไม่เอา Loader ขึ้นมากวนหน้าจอ
+        fetchFullHistoryInBackground();
         
     } catch(err) { 
         document.getElementById('historyBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${err.message}</td></tr>`; 
+    }
+}
+
+async function fetchFullHistoryInBackground() {
+    try {
+        // เรียก API โดยปิด showLoader (พารามิเตอร์ที่ 4 เป็น false)
+        const fullData = await callAPI('getBilledHistory', { mode: 'full' }, 2, false);
+        
+        if (fullData && !fullData.error) {
+            rawHistoryData = fullData;
+            saveToCache('cache_historyData', rawHistoryData);
+            
+            // อัปเดต Dropdown และตัวกรองให้มีข้อมูลครบถ้วนแบบเงียบๆ
+            populateHistoryDropdowns(rawHistoryData);
+            
+            // หากผู้ใช้อยู่ในหน้า History พอดี ก็รีเฟรชตารางให้มีข้อมูลครบ
+            if (document.getElementById('tab-history').classList.contains('active-history')) {
+                applyHistoryFilter();
+            }
+        }
+    } catch(e) {
+        console.error("Background fetch failed", e);
+    }
+}
+
+function populateHistoryDropdowns(data) {
+    let customers = [...new Set(data.map(r => r.customer).filter(v => v))]; 
+    let ddlCust = '<option value="">- ลูกค้าทั้งหมด -</option>'; 
+    customers.forEach(c => ddlCust += `<option value="${c}">${c}</option>`); 
+    if(document.getElementById('hFilterCustomer')) {
+        document.getElementById('hFilterCustomer').innerHTML = ddlCust;
+    }
+    
+    let csList = [...new Set(data.map(r => r.cs).filter(v => v && v !== '-'))]; 
+    let ddlCS = '<option value="">- CS ทั้งหมด -</option>'; 
+    csList.forEach(c => ddlCS += `<option value="${c}">${c}</option>`); 
+    if(document.getElementById('hFilterCS')) {
+        document.getElementById('hFilterCS').innerHTML = ddlCS;
     }
 }
 
@@ -1107,7 +1215,6 @@ function applyHistoryFilter() {
         let matchText = fText === '' || r.invoiceNo.toLowerCase().includes(fText); 
         let matchCS = fCS === '' || (r.cs && r.cs.toLowerCase().includes(fCS)); 
         let matchCust = fCust === '' || (r.customer && r.customer.toLowerCase().includes(fCust));
-        
         let mYear = fYear === '' || (validDate && d.getFullYear().toString() === fYear); 
         let mMonth = fMonth === '' || (validDate && (d.getMonth() + 1).toString().padStart(2, '0') === fMonth);
         
@@ -1141,6 +1248,7 @@ function sortHistory(col, keepDirection = false) {
         
         if(valA < valB) return histSortAsc ? -1 : 1; 
         if(valA > valB) return histSortAsc ? 1 : -1; 
+        
         return 0;
     });
     
@@ -1162,9 +1270,14 @@ function renderHistoryTable() {
         }
 
         dataToRender.forEach((r) => {
-            let dateStr = new Date(r.date).toLocaleDateString('en-GB');
-            let isOwnerOrAdmin = (currentUser.toString().trim().toLowerCase() === r.billingUser.toString().trim().toLowerCase() || currentUser === 'Admin');
+            let dateStr = "";
+            try {
+                dateStr = new Date(r.date).toLocaleDateString('en-GB');
+            } catch(e) {
+                dateStr = r.date;
+            }
             
+            let isOwnerOrAdmin = (currentUser.toString().trim().toLowerCase() === r.billingUser.toString().trim().toLowerCase() || currentUser === 'Admin');
             let docStatusStr = ''; 
             let menuItems = '';
 
@@ -1175,12 +1288,10 @@ function renderHistoryTable() {
                 docStatusStr += '<span class="badge bg-success bg-opacity-10 text-success border border-success mt-1 me-1">ใบเสร็จ</span>'; 
                 menuItems += `<li><button class="dropdown-item text-success" type="button" onclick="printPDF('${r.receiptNo}')"><i class="bi bi-receipt me-2"></i>ใบเสร็จรับเงิน (Receipt)</button></li>`; 
             }
-            
             if (r.voucherNo) { 
                 docStatusStr += '<span class="badge bg-info bg-opacity-10 text-info border border-info mt-1">ใบสำคัญ</span>'; 
                 menuItems += `<li><button class="dropdown-item text-info" type="button" onclick="printPDF('${r.voucherNo}')"><i class="bi bi-cash-coin me-2"></i>ใบสำคัญรับ (Voucher)</button></li>`; 
             }
-            
             if (!r.receiptNo || !r.voucherNo) {
                 menuItems += `<li><hr class="dropdown-divider"></li>`;
                 if (!r.receiptNo) {
@@ -1200,7 +1311,6 @@ function renderHistoryTable() {
                 if (r.voucherNo) {
                     menuItems += `<li><button class="dropdown-item text-danger" type="button" onclick="promptRollbackReceipt('${r.invoiceNo}', '${r.voucherNo}', 'VOU')"><i class="bi bi-trash me-2"></i>ลบใบสำคัญรับ</button></li>`;
                 }
-                
                 if (!r.receiptNo && !r.voucherNo) {
                     menuItems += `<li><button class="dropdown-item text-dark fw-bold" type="button" onclick="openEditInvoiceModal('${r.invoiceNo}')"><i class="bi bi-pencil-square me-2"></i>แก้ไขบิลโดยตรง</button></li>`;
                     menuItems += `<li><button class="dropdown-item text-danger" type="button" onclick="promptRollback('${r.invoiceNo}')"><i class="bi bi-arrow-counterclockwise me-2"></i>ยกเลิกบิล</button></li>`;
@@ -1238,21 +1348,12 @@ function renderHistoryTable() {
             `;
         });
     }
-    
     document.getElementById('historyBody').innerHTML = html;
 }
 
 async function viewInvoiceDetails(invNo) {
-    Swal.fire({ 
-        title: 'กำลังโหลดรายละเอียด...', 
-        allowOutsideClick: false, 
-        didOpen: () => Swal.showLoading(), 
-        customClass:{popup:'rounded-4'} 
-    });
-    
     try {
-        const res = await callAPI('getInvoiceDetails', { invoiceNo: invNo });
-        
+        const res = await callAPI('getInvoiceDetails', { invoiceNo: invNo }, 2, false);
         if (res && res.error) {
             return Swal.fire('เกิดข้อผิดพลาด', res.error, 'error');
         }
@@ -1284,7 +1385,11 @@ async function viewInvoiceDetails(invNo) {
             `; 
         });
         
-        html += `</tbody></table></div>`;
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
         
         Swal.fire({ 
             title: `<span class="fw-bold fs-4 text-dark">${invNo}</span>`, 
@@ -1292,7 +1397,7 @@ async function viewInvoiceDetails(invNo) {
             width: '650px', 
             showCloseButton: true, 
             showConfirmButton: false, 
-            customClass:{popup:'rounded-4', title:'mb-0'} 
+            customClass: {popup:'rounded-4', title:'mb-0'} 
         });
         
     } catch(err) { 
@@ -1301,16 +1406,8 @@ async function viewInvoiceDetails(invNo) {
 }
 
 async function openEditInvoiceModal(invoiceNo) {
-    Swal.fire({ 
-        title: 'กำลังโหลดข้อมูล...', 
-        allowOutsideClick: false, 
-        didOpen: () => Swal.showLoading(), 
-        customClass:{popup:'rounded-4'} 
-    });
-    
     try {
-        const res = await callAPI('getInvoiceForEdit', { invoiceNoStr: invoiceNo });
-        
+        const res = await callAPI('getInvoiceForEdit', { invoiceNoStr: invoiceNo }, 2, false);
         if(!res.success) {
             return Swal.fire('เกิดข้อผิดพลาด', res.message, 'error');
         }
@@ -1341,6 +1438,7 @@ async function openEditInvoiceModal(invoiceNo) {
                     </div>
                     <div class="card-body bg-light p-2 px-3">
                         <div class="row g-3">
+                            
                             <div class="col-md-6 border-end border-light">
                                 <p class="text-success fw-bold small mb-2"><i class="bi bi-arrow-up-right-circle me-1"></i>รายได้ (Income)</p>
                                 <div class="row g-2">
@@ -1362,6 +1460,7 @@ async function openEditInvoiceModal(invoiceNo) {
                                     </div>
                                 </div>
                             </div>
+                            
                             <div class="col-md-6">
                                 <p class="text-danger fw-bold small mb-2"><i class="bi bi-arrow-down-right-circle me-1"></i>สำรองจ่าย (Advance)</p>
                                 <div class="row g-2">
@@ -1402,6 +1501,7 @@ async function openEditInvoiceModal(invoiceNo) {
                                     </div>
                                 </div>
                             </div>
+                            
                         </div>
                     </div>
                 </div>
@@ -1409,7 +1509,6 @@ async function openEditInvoiceModal(invoiceNo) {
         });
         
         document.getElementById('editItemsContainer').innerHTML = html; 
-        Swal.close(); 
         new bootstrap.Modal(document.getElementById('editInvoiceModal')).show();
         
     } catch(err) { 
@@ -1464,14 +1563,6 @@ function confirmEditInvoice() {
         customClass:{popup:'rounded-4'}
     }).then(async (result) => {
         if (result.isConfirmed) {
-            Swal.fire({ 
-                title: 'กำลังอัปเดต...', 
-                text: 'กรุณารอสักครู่...', 
-                allowOutsideClick: false, 
-                didOpen: () => Swal.showLoading(), 
-                customClass:{popup:'rounded-4'} 
-            });
-            
             try {
                 const res = await callAPI('saveEditedInvoice', { 
                     invoiceNoStr: invNo, 
@@ -1510,7 +1601,9 @@ function confirmEditInvoice() {
                         showConfirmButton: false, 
                         showCloseButton: true, 
                         customClass:{popup:'rounded-4'}, 
-                        didClose: () => { loadBillingData(); } 
+                        didClose: () => { 
+                            forceSyncAll();
+                        } 
                     });
                 } else { 
                     Swal.fire({ 
@@ -1538,13 +1631,6 @@ function promptRollback(invoiceNo) {
        customClass:{popup:'rounded-4'}
    }).then(async res => {
       if(res.isConfirmed) {
-         Swal.fire({ 
-             title: 'กำลังดำเนินการ...', 
-             allowOutsideClick: false, 
-             didOpen: () => Swal.showLoading(), 
-             customClass:{popup:'rounded-4'} 
-         });
-         
          try { 
              const r = await callAPI('rollbackInvoice', { invoiceNo: invoiceNo }); 
              if(r.success) { 
@@ -1554,7 +1640,7 @@ function promptRollback(invoiceNo) {
                      text: r.message, 
                      customClass: {popup:'rounded-4'} 
                  }); 
-                 loadBillingData(); 
+                 forceSyncAll(); 
              } else { 
                  Swal.fire('เกิดข้อผิดพลาด', r.message, 'error'); 
              } 
@@ -1567,6 +1653,7 @@ function promptRollback(invoiceNo) {
 
 function promptRollbackReceipt(invoiceNo, docNoToDel, docTypeToDel) {
    let txt = docTypeToDel === 'REC' ? 'ใบเสร็จรับเงิน' : 'ใบสำคัญรับ';
+   
    Swal.fire({ 
        title: `ลบ${txt}?`, 
        html: `คุณแน่ใจหรือไม่ว่าต้องการลบ <b class="text-danger">${docNoToDel}</b>`, 
@@ -1578,15 +1665,12 @@ function promptRollbackReceipt(invoiceNo, docNoToDel, docTypeToDel) {
        customClass:{popup:'rounded-4'}
    }).then(async res => {
       if(res.isConfirmed) {
-         Swal.fire({ 
-             title: 'กำลังลบ...', 
-             allowOutsideClick: false, 
-             didOpen: () => Swal.showLoading(), 
-             customClass:{popup:'rounded-4'} 
-         });
-         
          try { 
-             const r = await callAPI('rollbackReceipt', { invoiceNo: invoiceNo, docType: docTypeToDel }); 
+             const r = await callAPI('rollbackReceipt', { 
+                 invoiceNo: invoiceNo, 
+                 docType: docTypeToDel 
+             }); 
+             
              if(r.success) { 
                  Swal.fire({ 
                      icon: 'success', 
@@ -1594,7 +1678,7 @@ function promptRollbackReceipt(invoiceNo, docNoToDel, docTypeToDel) {
                      text: r.message, 
                      customClass:{popup:'rounded-4'} 
                  }); 
-                 loadBillingData(); 
+                 forceSyncAll(); 
              } else { 
                  Swal.fire('เกิดข้อผิดพลาด', r.message, 'error'); 
              } 
@@ -1606,21 +1690,16 @@ function promptRollbackReceipt(invoiceNo, docNoToDel, docTypeToDel) {
 }
 
 async function printPDF(docNo) {
-   Swal.fire({ 
-       title: 'กำลังเรียกดู...', 
-       text: 'กำลังดึงลิงก์เอกสาร', 
-       allowOutsideClick: false, 
-       didOpen: () => Swal.showLoading(), 
-       customClass:{popup:'rounded-4'} 
-   });
-   
    try {
-       const res = await callAPI('getPdfUrl', { docNo: docNo });
+       const res = await callAPI('getPdfUrl', { docNo: docNo }, 2, false);
        
        if(res.success) { 
            Swal.fire({ 
                title: `<i class="bi bi-file-earmark-pdf text-primary fs-1"></i>`, 
-               html: `<h4 class="fw-bold mb-3">${docNo}</h4><a href="${res.url}" target="_blank" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow" onclick="Swal.close()">เปิดเอกสาร</a>`, 
+               html: `
+                    <h4 class="fw-bold mb-3">${docNo}</h4>
+                    <a href="${res.url}" target="_blank" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow" onclick="Swal.close()">เปิดเอกสาร</a>
+               `, 
                showConfirmButton: false, 
                showCloseButton: true, 
                customClass:{popup:'rounded-4'} 
@@ -1637,7 +1716,6 @@ async function printPDF(docNo) {
    }
 }
 
-// ================= Receipt & Voucher =================
 let currentReceiptInvNo = ""; 
 let currentDocType = ""; 
 
@@ -1650,9 +1728,7 @@ function openReceiptModal(invNo, docType) {
     const titleText = document.getElementById('recModalTitleText'); 
     const info = document.getElementById('recModalInfo'); 
     const btn = document.getElementById('btnConfirmReceipt'); 
-    const btnText = document.getElementById('btnConfirmReceiptText'); 
-    const spinner = document.getElementById('loadingSpinnerRec'); 
-    const loadingText = document.getElementById('loadingTextRec');
+    const btnText = document.getElementById('btnConfirmReceiptText');
     
     if(docType === 'RECEIPT') {
         if(header) header.className = 'modal-header bg-success bg-gradient text-white border-0 py-3'; 
@@ -1661,11 +1737,6 @@ function openReceiptModal(invNo, docType) {
         if(info) info.innerHTML = `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold">คำนวณเฉพาะยอดค่าขนส่ง (Freight Charge)</span>`; 
         if(btn) btn.className = 'btn btn-success rounded-pill px-5 fw-bold shadow-sm'; 
         if(btnText) btnText.innerText = 'สร้างใบเสร็จรับเงิน'; 
-        if(spinner) spinner.className = 'spinner-border text-success'; 
-        if(loadingText) { 
-            loadingText.className = 'mt-2 fw-bold text-success'; 
-            loadingText.innerText = 'กำลังสร้างใบเสร็จ...'; 
-        }
     } else {
         if(header) header.className = 'modal-header bg-info bg-gradient text-dark border-0 py-3'; 
         if(icon) icon.className = 'bi bi-cash-coin me-2'; 
@@ -1673,11 +1744,6 @@ function openReceiptModal(invNo, docType) {
         if(info) info.innerHTML = `<span class="badge bg-info bg-opacity-10 text-info border border-info fw-bold">คำนวณเฉพาะยอดสำรองจ่าย (Advance Payment)</span>`; 
         if(btn) btn.className = 'btn btn-info text-dark rounded-pill px-5 fw-bold shadow-sm'; 
         if(btnText) btnText.innerText = 'สร้างใบสำคัญรับ'; 
-        if(spinner) spinner.className = 'spinner-border text-info'; 
-        if(loadingText) { 
-            loadingText.className = 'mt-2 fw-bold text-info'; 
-            loadingText.innerText = 'กำลังสร้างใบสำคัญ...'; 
-        }
     }
     
     if(document.getElementById('recInvoiceNoLabel')) {
@@ -1695,10 +1761,6 @@ function openReceiptModal(invNo, docType) {
     
     if(document.getElementById('recShowDueDate')) {
         document.getElementById('recShowDueDate').checked = true;
-    }
-    
-    if(document.getElementById('loadingGenReceipt')) {
-        document.getElementById('loadingGenReceipt').style.display = 'none'; 
     }
     
     if(btn) {
@@ -1723,10 +1785,7 @@ async function confirmGenerateReceipt() {
         });
     }
     
-    let loadingContainer = document.getElementById('loadingGenReceipt'); 
     let btnConf = document.getElementById('btnConfirmReceipt');
-    
-    if(loadingContainer) loadingContainer.style.display = 'block'; 
     if(btnConf) btnConf.disabled = true;
 
     try {
@@ -1739,7 +1798,6 @@ async function confirmGenerateReceipt() {
             showDueDate: showDueDate 
         });
         
-        if(loadingContainer) loadingContainer.style.display = 'none'; 
         if(btnConf) btnConf.disabled = false;
         
         if(res.success) {
@@ -1753,11 +1811,17 @@ async function confirmGenerateReceipt() {
             Swal.fire({ 
                 icon: 'success', 
                 title: `สร้าง${docName}สำเร็จ!`, 
-                html: `<a href="${res.pdfUrl}" target="_blank" class="btn ${btnClass} btn-lg rounded-pill mt-3 px-5 fw-bold shadow-sm" onclick="Swal.close()"><i class="bi bi-file-earmark-pdf-fill me-2"></i> เปิดดูเอกสาร</a>`, 
+                html: `
+                    <a href="${res.pdfUrl}" target="_blank" class="btn ${btnClass} btn-lg rounded-pill mt-3 px-5 fw-bold shadow-sm" onclick="Swal.close()">
+                        <i class="bi bi-file-earmark-pdf-fill me-2"></i> เปิดดูเอกสาร
+                    </a>
+                `, 
                 showConfirmButton: false, 
                 showCloseButton: true, 
                 customClass: {popup: 'rounded-4'}, 
-                didClose: () => { loadBillingData(); } 
+                didClose: () => { 
+                    forceSyncAll();
+                } 
             });
         } else { 
             Swal.fire({ 
@@ -1767,7 +1831,6 @@ async function confirmGenerateReceipt() {
             }); 
         }
     } catch(err) {
-        if(loadingContainer) loadingContainer.style.display = 'none'; 
         if(btnConf) btnConf.disabled = false; 
         Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
     }
