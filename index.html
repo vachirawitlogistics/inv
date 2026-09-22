@@ -4,20 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Billing System 2026</title>
-  
-  <!-- Bootstrap & Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  
-  <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
-  
-  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
-<!-- ระบบป้องกันการกดซ้ำซ้อน (Global Loader) -->
 <div id="global-full-loader" class="global-loader-wrapper" style="display: none;">
     <div class="loader-content text-center">
         <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
@@ -25,30 +18,19 @@
     </div>
 </div>
 
-<!-- Animated Login Section (เวอร์ชันอลังการ) -->
 <div id="loginSection" class="login-wrapper">
-  <!-- Glowing Background Orbs -->
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
-  <div class="blob blob-4"></div>
-  
+  <div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div><div class="blob blob-4"></div>
   <div class="container d-flex justify-content-center align-items-center h-100 position-relative z-1">
     <div class="login-card text-center">
       <div class="login-icon-wrapper mb-4">
-        <div class="login-icon-bg pulse-anim">
-          <i class="bi bi-hexagon-fill text-white" style="font-size: 2.5rem;"></i>
-        </div>
+        <div class="login-icon-bg pulse-anim"><i class="bi bi-hexagon-fill text-white" style="font-size: 2.5rem;"></i></div>
       </div>
-      
       <h3 class="mb-1 fw-bold text-gradient">Billing System</h3>
       <p class="mb-4 small fw-medium tracking-wide text-light-50">LOGISTICS MANAGEMENT 2026</p>
-      
       <div class="form-floating mb-4 login-input-group">
         <input type="password" id="loginPassword" class="form-control text-center shadow-none" placeholder="Password">
         <label for="loginPassword" class="text-center w-100"><i class="bi bi-shield-lock me-1"></i> รหัสผ่านเข้าสู่ระบบ</label>
       </div>
-      
       <button class="btn btn-login w-100 py-3 shadow-lg" onclick="doLogin()">
         <span class="fw-bold fs-6 tracking-wide">AUTHENTICATE</span> 
         <i class="bi bi-rocket-takeoff-fill ms-2 animate-fly"></i>
@@ -57,48 +39,32 @@
   </div>
 </div>
 
-<!-- Main Application -->
 <div id="mainApp" class="container-fluid" style="display: none;">
-  
-  <!-- Top Navigation Bar -->
   <div class="d-flex justify-content-between align-items-center mb-3 flex-shrink-0 flex-wrap gap-2 pt-3">
     <ul class="nav nav-pills floating-nav" id="pills-tab" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active-audit" id="tab-audit" data-bs-target="#content-audit" type="button" role="tab" onclick="renderAuditTab()">
-          <i class="bi bi-check2-square me-1"></i> ตรวจสอบยอด
-        </button>
+        <button class="nav-link active-audit" id="tab-audit" data-bs-target="#content-audit" type="button" role="tab" onclick="renderAuditTab()"><i class="bi bi-check2-square me-1"></i> ตรวจสอบยอด</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-invoice" data-bs-target="#content-invoice" type="button" role="tab" onclick="renderReadyTab()">
-          <i class="bi bi-file-earmark-ruled me-1"></i> เตรียมวางบิล
-        </button>
+        <button class="nav-link" id="tab-invoice" data-bs-target="#content-invoice" type="button" role="tab" onclick="renderReadyTab()"><i class="bi bi-file-earmark-ruled me-1"></i> เตรียมวางบิล</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-history" data-bs-target="#content-history" type="button" role="tab" onclick="loadHistory()">
-          <i class="bi bi-clock-history me-1"></i> ประวัติระบบ
-        </button>
+        <button class="nav-link" id="tab-history" data-bs-target="#content-history" type="button" role="tab" onclick="loadHistory()"><i class="bi bi-clock-history me-1"></i> ประวัติระบบ</button>
       </li>
     </ul>
     
     <div class="d-flex align-items-center gap-2 floating-nav px-2 py-1">
         <div class="d-flex align-items-center me-2 border-end pe-2">
-            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 28px; height: 28px;">
-              <i class="bi bi-person-fill"></i>
-            </div>
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-1" style="width: 28px; height: 28px;"><i class="bi bi-person-fill"></i></div>
             <span class="fw-bold text-dark small" id="displayUser"></span>
         </div>
-        <button class="btn btn-light text-primary btn-sm btn-rounded fw-bold border" onclick="loadBillingData()">
-          <i class="bi bi-arrow-clockwise"></i> ซิงค์
-        </button>
-        <button class="btn btn-white text-danger btn-sm btn-rounded fw-bold border" onclick="logout()">
-          <i class="bi bi-power"></i> ออก
-        </button>
+        <button class="btn btn-light text-primary btn-sm btn-rounded fw-bold border" onclick="forceSyncAll()"><i class="bi bi-arrow-clockwise"></i> ซิงค์</button>
+        <button class="btn btn-white text-danger btn-sm btn-rounded fw-bold border" onclick="logout()"><i class="bi bi-power"></i> ออก</button>
     </div>
   </div>
 
   <div class="tab-content" id="pills-tabContent">
-    
-    <!-- Tab 1: ตรวจสอบยอด (Audit) -->
+    <!-- Tab 1: Audit -->
     <div class="tab-pane fade show active" id="content-audit" role="tabpanel">
         <div class="card flex-shrink-0">
           <div class="row g-2 align-items-end">
@@ -108,15 +74,11 @@
             </div>
             <div class="col-lg-2 col-md-4">
               <label class="small text-muted mb-1 fw-semibold ms-1">Customer Service</label>
-              <select id="filterCSA" class="form-select" onchange="applyFilterAudit()">
-                <option value="">- เลือก CS -</option>
-              </select>
+              <select id="filterCSA" class="form-select" onchange="applyFilterAudit()"><option value="">- เลือก CS -</option></select>
             </div>
             <div class="col-lg-3 col-md-4">
               <label class="small text-muted mb-1 fw-semibold ms-1">ลูกค้า (Customer)</label>
-              <select id="filterCustomerA" class="form-select" onchange="applyFilterAudit()">
-                <option value="">- เลือกลูกค้า -</option>
-              </select>
+              <select id="filterCustomerA" class="form-select" onchange="applyFilterAudit()"><option value="">- เลือกลูกค้า -</option></select>
             </div>
             <div class="col-lg-2 col-md-6">
               <label class="small text-primary mb-1 fw-semibold ms-1">แสดงผล</label>
@@ -129,9 +91,7 @@
             </div>
             <div class="col-lg-2 col-md-6 d-flex gap-2">
               <button class="btn btn-light fw-bold flex-fill" onclick="clearFilterAudit()">ล้าง</button>
-              <button class="btn btn-warning fw-bold text-white flex-fill shadow-sm" onclick="saveAuditBulk()">
-                <i class="bi bi-check-circle me-1"></i> อนุมัติ (<span id="selCountA">0</span>)
-              </button>
+              <button class="btn btn-warning fw-bold text-white flex-fill shadow-sm" onclick="saveAuditBulk()"><i class="bi bi-check-circle me-1"></i> อนุมัติ (<span id="selCountA">0</span>)</button>
             </div>
           </div>
         </div>
@@ -140,15 +100,8 @@
             <table class="table table-borderless text-nowrap align-middle mb-0">
               <thead>
                 <tr>
-                  <th class="text-center" style="width: 40px;">
-                    <input type="checkbox" id="checkAllA" class="form-check-input shadow-sm" style="width: 1.1em; height: 1.1em;" onclick="toggleAllAudit(this)">
-                  </th>
-                  <th>วันที่ดำเนินการ</th>
-                  <th>ผู้ดูแล (CS)</th>
-                  <th>ลูกค้า</th>
-                  <th>Booking Number</th>
-                  <th class="text-center">ตู้คอนเทนเนอร์</th>
-                  <th class="text-end pe-3">ยอดประเมินระบบ</th>
+                  <th class="text-center" style="width: 40px;"><input type="checkbox" id="checkAllA" class="form-check-input shadow-sm" style="width: 1.1em; height: 1.1em;" onclick="toggleAllAudit(this)"></th>
+                  <th>วันที่ดำเนินการ</th><th>ผู้ดูแล (CS)</th><th>ลูกค้า</th><th>Booking Number</th><th class="text-center">ตู้คอนเทนเนอร์</th><th class="text-end pe-3">ยอดประเมินระบบ</th>
                 </tr>
               </thead>
               <tbody id="auditBody"></tbody>
@@ -156,15 +109,13 @@
         </div>
     </div>
 
-    <!-- Tab 2: เตรียมวางบิล (Ready for Invoice) -->
+    <!-- Tab 2: Ready for Invoice -->
     <div class="tab-pane fade" id="content-invoice" role="tabpanel" style="display: none;">
         <div class="card flex-shrink-0">
           <div class="row g-2 align-items-end">
             <div class="col-lg-3 col-md-4">
               <label class="small text-primary mb-1 fw-semibold ms-1"><i class="bi bi-funnel me-1"></i>เลือกลูกค้าเพื่อตั้งบิล</label>
-              <select id="filterCustomerR" class="form-select border-primary bg-primary bg-opacity-10 text-primary fw-bold" onchange="applyFilterReady()">
-                <option value="">- ระบุลูกค้า -</option>
-              </select>
+              <select id="filterCustomerR" class="form-select border-primary bg-primary bg-opacity-10 text-primary fw-bold" onchange="applyFilterReady()"><option value="">- ระบุลูกค้า -</option></select>
             </div>
             <div class="col-lg-4 col-md-4">
               <label class="small text-muted mb-1 fw-semibold ms-1">ค้นหาเพิ่มเติม</label>
@@ -173,10 +124,8 @@
             <div class="col-lg-2 col-md-4">
               <label class="small text-muted mb-1 fw-semibold ms-1">แสดงผล</label>
               <select id="limitR" class="form-select" onchange="renderReadyTab()">
-                <option value="30">30 รายการ</option>
-                <option value="50" selected>50 รายการ</option>
-                <option value="100">100 รายการ</option>
-                <option value="ALL">ทั้งหมด</option>
+                <option value="30">30 รายการ</option><option value="50" selected>50 รายการ</option>
+                <option value="100">100 รายการ</option><option value="ALL">ทั้งหมด</option>
               </select>
             </div>
             <div class="col-lg-3 col-md-12 d-flex justify-content-end align-items-end">
@@ -199,16 +148,12 @@
                 <div class="fs-5 fw-bold text-danger">฿<span id="sumAdvanceR">0.00</span></div>
             </div>
             <div class="summary-box grand-total flex-fill position-relative overflow-hidden">
-                <div class="position-absolute top-0 end-0 opacity-25" style="transform: translate(10%, -20%);">
-                  <i class="bi bi-cash-stack" style="font-size: 4rem;"></i>
-                </div>
+                <div class="position-absolute top-0 end-0 opacity-25" style="transform: translate(10%, -20%);"><i class="bi bi-cash-stack" style="font-size: 4rem;"></i></div>
                 <div class="small fw-semibold mb-1 opacity-75">ยอดรวมสุทธิ (Net Total)</div>
                 <div class="fs-5 fw-bold">฿<span id="sumGrandR">0.00</span></div>
             </div>
             <div class="d-flex align-items-center">
-                <button class="btn btn-primary rounded-3 shadow-sm fw-bold px-3 h-100" onclick="generateInvoiceBulk()">
-                  <i class="bi bi-file-earmark-pdf-fill d-block mb-1 fs-6"></i> สร้าง Invoice
-                </button>
+                <button class="btn btn-primary rounded-3 shadow-sm fw-bold px-3 h-100" onclick="generateInvoiceBulk()"><i class="bi bi-file-earmark-pdf-fill d-block mb-1 fs-6"></i> สร้าง Invoice</button>
             </div>
         </div>
 
@@ -216,17 +161,9 @@
             <table class="table table-borderless text-nowrap align-middle mb-0">
               <thead>
                 <tr>
-                  <th class="text-center" style="width: 40px;">
-                    <input type="checkbox" id="checkAllR" class="form-check-input shadow-sm" style="width: 1.1em; height: 1.1em;" onclick="toggleAllReady(this)">
-                  </th>
-                  <th>วันที่ทำรายการ</th>
-                  <th>ลูกค้า</th>
-                  <th>Booking Number</th>
-                  <th class="text-center">จำนวนตู้</th>
-                  <th class="text-end text-success">รายได้รวม</th>
-                  <th class="text-end text-danger">สำรองจ่ายรวม</th>
-                  <th class="text-end text-primary pe-3">รวมสุทธิ</th>
-                  <th class="text-center">ตั้งค่า</th>
+                  <th class="text-center" style="width: 40px;"><input type="checkbox" id="checkAllR" class="form-check-input shadow-sm" style="width: 1.1em; height: 1.1em;" onclick="toggleAllReady(this)"></th>
+                  <th>วันที่ทำรายการ</th><th>ลูกค้า</th><th>Booking Number</th><th class="text-center">จำนวนตู้</th><th class="text-end text-success">รายได้รวม</th>
+                  <th class="text-end text-danger">สำรองจ่ายรวม</th><th class="text-end text-primary pe-3">รวมสุทธิ</th><th class="text-center">ตั้งค่า</th>
                 </tr>
               </thead>
               <tbody id="readyBody"></tbody>
@@ -234,7 +171,7 @@
         </div>
     </div>
 
-    <!-- Tab 3: ประวัติวางบิล (History) -->
+    <!-- Tab 3: History -->
     <div class="tab-pane fade" id="content-history" role="tabpanel" style="display: none;">
         <div class="card flex-shrink-0">
             <div class="row g-2 align-items-center">
@@ -242,54 +179,18 @@
                  <h6 class="fw-bold text-dark m-0"><i class="bi bi-archive-fill text-primary me-2"></i>ประวัติเอกสาร</h6>
                  <p class="small text-muted m-0" style="font-size: 0.75rem;">ประวัติการวางบิล</p>
                </div>
-               <div class="col-lg-2">
-                 <input type="text" id="hFilterText" class="form-control form-control-sm" placeholder="🔍 ค้นหาเลขบิล..." onkeyup="applyHistoryFilter()">
-               </div>
-               <div class="col-lg-2">
-                 <select id="hFilterCS" class="form-select form-select-sm" onchange="applyHistoryFilter()">
-                   <option value="">- CS -</option>
-                 </select>
-               </div>
-               <div class="col-lg-2">
-                 <select id="hFilterCustomer" class="form-select form-select-sm" onchange="applyHistoryFilter()">
-                   <option value="">- ลูกค้า -</option>
-                 </select>
-               </div>
-               <div class="col-lg-1">
-                 <select id="hFilterYear" class="form-select form-select-sm" onchange="applyHistoryFilter()">
-                   <option value="">- ปี -</option>
-                   <option value="2026">2026</option>
-                   <option value="2025">2025</option>
-                 </select>
-               </div>
+               <div class="col-lg-2"><input type="text" id="hFilterText" class="form-control form-control-sm" placeholder="🔍 ค้นหาเลขบิล..." onkeyup="applyHistoryFilter()"></div>
+               <div class="col-lg-2"><select id="hFilterCS" class="form-select form-select-sm" onchange="applyHistoryFilter()"><option value="">- CS -</option></select></div>
+               <div class="col-lg-2"><select id="hFilterCustomer" class="form-select form-select-sm" onchange="applyHistoryFilter()"><option value="">- ลูกค้า -</option></select></div>
+               <div class="col-lg-1"><select id="hFilterYear" class="form-select form-select-sm" onchange="applyHistoryFilter()"><option value="">- ปี -</option><option value="2026">2026</option><option value="2025">2025</option></select></div>
                <div class="col-lg-1">
                  <select id="hFilterMonth" class="form-select form-select-sm" onchange="applyHistoryFilter()">
-                   <option value="">- เดือน -</option>
-                   <option value="01">ม.ค.</option>
-                   <option value="02">ก.พ.</option>
-                   <option value="03">มี.ค.</option>
-                   <option value="04">เม.ย.</option>
-                   <option value="05">พ.ค.</option>
-                   <option value="06">มิ.ย.</option>
-                   <option value="07">ก.ค.</option>
-                   <option value="08">ส.ค.</option>
-                   <option value="09">ก.ย.</option>
-                   <option value="10">ต.ค.</option>
-                   <option value="11">พ.ย.</option>
-                   <option value="12">ธ.ค.</option>
+                   <option value="">- เดือน -</option><option value="01">ม.ค.</option><option value="02">ก.พ.</option><option value="03">มี.ค.</option><option value="04">เม.ย.</option><option value="05">พ.ค.</option><option value="06">มิ.ย.</option>
+                   <option value="07">ก.ค.</option><option value="08">ส.ค.</option><option value="09">ก.ย.</option><option value="10">ต.ค.</option><option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
                  </select>
                </div>
-               <div class="col-lg-1">
-                 <select id="limitH" class="form-select form-select-sm" onchange="applyHistoryFilter()">
-                   <option value="30">30</option>
-                   <option value="50" selected>50</option>
-                   <option value="100">100</option>
-                   <option value="ALL">ทั้งหมด</option>
-                 </select>
-               </div>
-               <div class="col-lg-1 text-end">
-                 <button class="btn btn-light btn-sm w-100 fw-bold" onclick="clearHistoryFilters()">ล้าง</button>
-               </div>
+               <div class="col-lg-1"><select id="limitH" class="form-select form-select-sm" onchange="applyHistoryFilter()"><option value="30">30</option><option value="50" selected>50</option><option value="100">100</option><option value="ALL">ทั้งหมด</option></select></div>
+               <div class="col-lg-1 text-end"><button class="btn btn-light btn-sm w-100 fw-bold" onclick="clearHistoryFilters()">ล้าง</button></div>
             </div>
         </div>
         
@@ -307,11 +208,7 @@
               </tr>
             </thead>
             <tbody id="historyBody">
-              <tr>
-                <td colspan="7" class="text-center py-4 text-muted">
-                  <div class="spinner-border spinner-border-sm text-primary me-2"></div> กำลังเชื่อมต่อข้อมูล...
-                </td>
-              </tr>
+              <tr><td colspan="7" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div> กำลังเชื่อมต่อข้อมูล...</td></tr>
             </tbody>
           </table>
         </div>
@@ -319,14 +216,12 @@
   </div>
 </div>
 
-<!-- ================= MODALS SECTION ================= -->
-
 <!-- Modal: Invoice Configuration -->
 <div class="modal fade" id="invoiceSettingModal" data-bs-backdrop="static" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header bg-primary bg-gradient text-white">
-        <h6 class="modal-title fw-bold mb-0"><i class="bi bi-printer-fill me-2"></i>ตั้งค่าใบแจ้งหนี้ (Invoice Configuration)</h6>
+        <h6 class="modal-title fw-bold mb-0"><i class="bi bi-printer-fill me-2"></i>ตั้งค่าใบแจ้งหนี้</h6>
         <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body bg-light">
@@ -335,37 +230,30 @@
             <label class="fw-semibold text-secondary mb-1 small">ออกเอกสารในนาม (Bill To)</label>
             <input type="text" id="modBillToName" list="modalCompanyList" class="form-control fw-bold text-dark bg-white" placeholder="ระบุชื่อบริษัท...">
             <datalist id="modalCompanyList"></datalist>
-            
             <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-light">
                 <span class="text-muted small fw-medium">รายการ: <span id="modCount" class="badge bg-primary rounded-pill px-2 ms-1">0</span></span> 
                 <span class="text-muted small fw-medium">ยอดเงิน: <span id="modTotal" class="text-primary fw-bold ms-1">฿0.00</span></span>
             </div>
           </div>
         </div>
-        
         <div class="mb-3">
             <label class="fw-semibold text-secondary mb-1 small">วันที่ลงเอกสาร</label>
             <input type="date" id="modInvoiceDate" class="form-control fw-bold text-dark bg-white" required>
         </div>
-        
         <div class="mb-3">
             <label class="fw-semibold text-secondary mb-1 small">อ้างอิงเลขบิลเดิม (กรณีแก้ไข)</label>
             <input type="text" id="modCustomInvNo" class="form-control fw-bold text-primary bg-white" placeholder="สร้างอัตโนมัติ">
         </div>
-        
         <div class="card border-0 shadow-sm mb-1" style="cursor: pointer;" onclick="document.getElementById('modSplitInvoice').click()">
           <div class="card-body p-2 px-3 d-flex justify-content-between align-items-center">
             <div>
               <h6 class="fw-bold text-dark mb-0 fs-6">แยกบิล 2 ใบ</h6>
               <small class="text-muted" style="font-size: 0.75rem;">แยกค่าขนส่ง และ สำรองจ่าย</small>
             </div>
-            <div class="form-check form-switch m-0">
-              <input class="form-check-input" type="checkbox" id="modSplitInvoice" onclick="event.stopPropagation();">
-            </div>
+            <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" id="modSplitInvoice" onclick="event.stopPropagation();"></div>
           </div>
         </div>
       </div>
-      
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-white border text-muted fw-bold rounded-pill px-3 shadow-sm" data-bs-dismiss="modal">ยกเลิก</button>
         <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="btnConfirmGen" onclick="confirmGeneratePDF()">ยืนยันสร้างเอกสาร</button>
@@ -374,36 +262,22 @@
   </div>
 </div>
 
-<!-- Modal: Direct Edit (แก้ไขบิลโดยตรง) -->
+<!-- Modal: Direct Edit -->
 <div class="modal fade" id="editInvoiceModal" data-bs-backdrop="static" tabindex="-1">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header bg-dark text-white">
-        <h6 class="modal-title fw-bold mb-0"><i class="bi bi-pencil-square me-2"></i>แก้ไขข้อมูลบิลโดยตรง (Direct Editor)</h6>
+        <h6 class="modal-title fw-bold mb-0"><i class="bi bi-pencil-square me-2"></i>แก้ไขข้อมูลบิลโดยตรง</h6>
         <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body bg-light p-3">
          <div class="card border-0 shadow-sm mb-3">
            <div class="card-body p-3">
              <div class="row g-2">
-               <div class="col-md-3">
-                 <label class="small text-muted fw-semibold">เลขที่บิล</label>
-                 <input type="text" id="editInvNo" class="form-control form-control-sm fw-bold text-secondary bg-light border-0" readonly>
-               </div>
-               <div class="col-md-3">
-                 <label class="small text-muted fw-semibold">วันที่</label>
-                 <input type="date" id="editInvDate" class="form-control form-control-sm fw-bold">
-               </div>
-               <div class="col-md-4">
-                 <label class="small text-muted fw-semibold">ลูกค้า</label>
-                 <input type="text" id="editCustomer" class="form-control form-control-sm fw-bold">
-               </div>
-               <div class="col-md-2 d-flex align-items-end pb-1">
-                 <div class="form-check form-switch m-0">
-                   <input class="form-check-input" type="checkbox" id="editIsSplit">
-                   <label class="form-check-label small fw-bold ms-1 text-dark">แยกบิล</label>
-                 </div>
-               </div>
+               <div class="col-md-3"><label class="small text-muted fw-semibold">เลขที่บิล</label><input type="text" id="editInvNo" class="form-control form-control-sm fw-bold text-secondary bg-light border-0" readonly></div>
+               <div class="col-md-3"><label class="small text-muted fw-semibold">วันที่</label><input type="date" id="editInvDate" class="form-control form-control-sm fw-bold"></div>
+               <div class="col-md-4"><label class="small text-muted fw-semibold">ลูกค้า</label><input type="text" id="editCustomer" class="form-control form-control-sm fw-bold"></div>
+               <div class="col-md-2 d-flex align-items-end pb-1"><div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" id="editIsSplit"><label class="form-check-label small fw-bold ms-1 text-dark">แยกบิล</label></div></div>
              </div>
            </div>
          </div>
@@ -411,9 +285,7 @@
       </div>
       <div class="modal-footer bg-light border-top">
         <button type="button" class="btn btn-white border text-muted fw-bold rounded-pill px-4 shadow-sm" data-bs-dismiss="modal">ละทิ้งการแก้ไข</button>
-        <button type="button" class="btn btn-dark rounded-pill px-4 fw-bold shadow-sm" onclick="confirmEditInvoice()">
-          <i class="bi bi-save me-1"></i> บันทึกและสร้าง PDF ใหม่
-        </button>
+        <button type="button" class="btn btn-dark rounded-pill px-4 fw-bold shadow-sm" onclick="confirmEditInvoice()"><i class="bi bi-save me-1"></i> บันทึกและสร้าง PDF ใหม่</button>
       </div>
     </div>
   </div>
@@ -424,75 +296,51 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div id="recModalHeader" class="modal-header bg-success text-white">
-        <h6 class="modal-title fw-bold mb-0">
-          <i id="recModalIcon" class="bi bi-receipt-cutoff me-2"></i>
-          <span id="recModalTitleText">ออกใบเสร็จรับเงิน</span>
-        </h6>
+        <h6 class="modal-title fw-bold mb-0"><i id="recModalIcon" class="bi bi-receipt-cutoff me-2"></i><span id="recModalTitleText">ออกใบเสร็จรับเงิน</span></h6>
         <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body bg-light">
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body p-2 text-center">
-            <div class="text-secondary small fw-bold">อ้างอิงใบแจ้งหนี้ (REFERENCE INVOICE)</div>
+            <div class="text-secondary small fw-bold">อ้างอิงใบแจ้งหนี้</div>
             <div id="recInvoiceNoLabel" class="fw-bold text-dark fs-5">INV...</div>
             <div id="recModalInfo" class="small mt-1 pt-1 border-top" style="font-size: 0.75rem;"></div>
           </div>
         </div>
-        
         <div class="mb-3">
             <label class="small text-muted fw-semibold mb-1">วันที่เอกสาร</label>
             <input type="date" id="modReceiptDate" class="form-control fw-bold text-dark bg-white" required>
         </div>
-        
         <div class="card border-0 shadow-sm mb-3" style="cursor: pointer;" onclick="document.getElementById('recShowDueDate').click()">
             <div class="card-body p-2 px-3 d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 class="fw-bold text-dark mb-0 fs-6">แสดงกำหนดชำระเงิน</h6>
-                  <small class="text-muted" style="font-size: 0.75rem;">Due Date บนเอกสาร</small>
-                </div>
-                <div class="form-check form-switch m-0">
-                  <input class="form-check-input" type="checkbox" id="recShowDueDate" checked onclick="event.stopPropagation();">
-                </div>
+                <div><h6 class="fw-bold text-dark mb-0 fs-6">แสดงกำหนดชำระเงิน</h6><small class="text-muted" style="font-size: 0.75rem;">Due Date บนเอกสาร</small></div>
+                <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" id="recShowDueDate" checked onclick="event.stopPropagation();"></div>
             </div>
         </div>
-        
         <label class="small text-muted fw-semibold mb-1">รูปแบบตารางรายการ</label>
         <div class="card border-0 shadow-sm overflow-hidden mb-2">
             <div class="list-group list-group-flush">
               <label class="list-group-item d-flex gap-3 bg-white p-2 px-3 border-light" style="cursor: pointer;">
                 <input class="form-check-input flex-shrink-0 mt-2" type="radio" name="recMode" id="recModeDetail" value="DETAIL" checked>
-                <span>
-                  <strong class="d-block text-dark small">แบบแจกแจงรายการ (Detailed)</strong>
-                  <small class="text-muted" style="font-size: 0.7rem;">แยกรายการตู้และรายละเอียด</small>
-                </span>
+                <span><strong class="d-block text-dark small">แบบแจกแจงรายการ (Detailed)</strong><small class="text-muted" style="font-size: 0.7rem;">แยกรายการตู้และรายละเอียด</small></span>
               </label>
               <label class="list-group-item d-flex gap-3 bg-white p-2 px-3 border-0" style="cursor: pointer;">
                 <input class="form-check-input flex-shrink-0 mt-2" type="radio" name="recMode" id="recModeSum" value="SUMMARY">
-                <span>
-                  <strong class="d-block text-dark small">แบบสรุปยอดเหมา (Summarized)</strong>
-                  <small class="text-muted" style="font-size: 0.7rem;">รวมยอดเป็นรายการเดียว</small>
-                </span>
+                <span><strong class="d-block text-dark small">แบบสรุปยอดเหมา (Summarized)</strong><small class="text-muted" style="font-size: 0.7rem;">รวมยอดเป็นรายการเดียว</small></span>
               </label>
             </div>
         </div>
       </div>
-      
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-white border text-muted fw-bold rounded-pill px-3 shadow-sm" data-bs-dismiss="modal">ยกเลิก</button>
-        <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" id="btnConfirmReceipt" onclick="confirmGenerateReceipt()">
-          <span id="btnConfirmReceiptText">สร้างเอกสาร</span>
-        </button>
+        <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" id="btnConfirmReceipt" onclick="confirmGenerateReceipt()"><span id="btnConfirmReceiptText">สร้างเอกสาร</span></button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Load Bootstrap JS BEFORE our custom script -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Custom JavaScript -->
 <script src="api.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>

@@ -1,23 +1,35 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwnPUd6WiFNs_jMwR2W8nJbT-iH3o2AKy1owdIcT1L5SEdn1exyarqzPnSHm5gaK_Cj/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyAY1IFG4By3uwMdh-OUgYrYqEP7YHRzB56gNM9TMT9waQXfofDI2ML9muI-Ag4TLYz/exec';
 
-async function callAPI(action, params = {}, retries = 5, showLoader = true) {
+async function callAPI(action, params = {}, retries = 3, showLoader = true) {
     const token = localStorage.getItem('invToken');
     
     if (showLoader && typeof showGlobalLoader === 'function') showGlobalLoader();
     
     for (let i = 0; i <= retries; i++) {
         try {
-            // ใช้โครงสร้างพื้นฐานที่สุด เพื่อป้องกันการโดน Google บล็อก
+            if (i > 0) await new Promise(res => setTimeout(res, 1000 * i + Math.random() * 1000));
+
             const response = await fetch(GAS_URL, { 
                 method: 'POST', 
+                redirect: 'follow',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: action, params: params, token: token }) 
             });
             
-            const result = await response.json();
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
             
-            if (result && result.success === false && result.message && result.message.includes("เซิร์ฟเวอร์กำลังประมวลผล")) {
-                throw new Error("SERVER_BUSY");
+            const text = await response.text();
+            let result;
+            
+            try { 
+                result = JSON.parse(text); 
+            } catch (e) { 
+                throw new Error("Server Error"); 
+            }
+            
+            if (result && result.success === false && result.message) {
+                if (result.message.includes("ประมวลผล")) throw new Error("BUSY");
+                throw new Error(result.message);
             }
             
             if (showLoader && typeof hideGlobalLoader === 'function') hideGlobalLoader();
@@ -28,10 +40,9 @@ async function callAPI(action, params = {}, retries = 5, showLoader = true) {
                 if (showLoader && typeof hideGlobalLoader === 'function') hideGlobalLoader();
                 return { 
                     success: false, 
-                    message: error.message === "SERVER_BUSY" ? "ระบบมีผู้ใช้งานหนาแน่น กรุณาลองใหม่อีกครั้งครับ" : error.toString() 
+                    message: error.message === "BUSY" ? "ระบบหนาแน่น กรุณาลองใหม่" : "การเชื่อมต่อขัดข้อง" 
                 };
             }
-            await new Promise(resolve => setTimeout(resolve, 3000)); 
         }
     }
 }
